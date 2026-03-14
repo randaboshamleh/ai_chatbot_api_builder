@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Send, MessageCircle, CheckCircle, XCircle, Zap, Link as LinkIcon } from 'lucide-react'
 import { motion } from 'framer-motion'
@@ -17,34 +17,43 @@ export default function ChannelsPage() {
         active: false
     })
 
-    const channels = [
-        {
-            name: t('channels.telegram'),
-            icon: Send,
-            gradient: 'from-blue-500 to-cyan-500',
-            bgGradient: 'from-blue-50 to-cyan-50',
-            description: 'Connect your Telegram bot to enable automated responses',
-            config: telegramConfig,
-            setConfig: setTelegramConfig,
-            fields: [
-                { key: 'botToken', label: t('channels.botToken'), type: 'text', placeholder: '1234567890:ABCdefGHIjklMNOpqrsTUVwxyz' },
-                { key: 'webhookUrl', label: t('channels.webhookUrl'), type: 'text', placeholder: 'https://your-domain.com/webhook' }
-            ]
-        },
-        {
-            name: t('channels.whatsapp'),
-            icon: MessageCircle,
-            gradient: 'from-emerald-500 to-teal-500',
-            bgGradient: 'from-emerald-50 to-teal-50',
-            description: 'Integrate WhatsApp Business API for customer support',
-            config: whatsappConfig,
-            setConfig: setWhatsappConfig,
-            fields: [
-                { key: 'phoneNumber', label: t('channels.phoneNumber'), type: 'text', placeholder: '+1234567890' },
-                { key: 'apiKey', label: t('channels.apiKey'), type: 'password', placeholder: 'Your WhatsApp API Key' }
-            ]
-        }
-    ]
+    const channels: Array<{
+        name: string
+        icon: React.ElementType
+        gradient: string
+        bgGradient: string
+        description: string
+        config: Record<string, string | boolean>
+        setConfig: (v: any) => void
+        fields: Array<{ key: string; label: string; type: string; placeholder: string }>
+    }> = [
+            {
+                name: t('channels.telegram'),
+                icon: Send,
+                gradient: 'from-blue-500 to-cyan-500',
+                bgGradient: 'from-blue-50 to-cyan-50',
+                description: 'Connect your Telegram bot to enable automated responses',
+                config: telegramConfig,
+                setConfig: setTelegramConfig,
+                fields: [
+                    { key: 'botToken', label: t('channels.botToken'), type: 'text', placeholder: '1234567890:ABCdefGHIjklMNOpqrsTUVwxyz' },
+                    { key: 'webhookUrl', label: t('channels.webhookUrl'), type: 'text', placeholder: 'https://your-domain.com/webhook' }
+                ]
+            },
+            {
+                name: t('channels.whatsapp'),
+                icon: MessageCircle,
+                gradient: 'from-emerald-500 to-teal-500',
+                bgGradient: 'from-emerald-50 to-teal-50',
+                description: 'Integrate WhatsApp Business API for customer support',
+                config: whatsappConfig,
+                setConfig: setWhatsappConfig,
+                fields: [
+                    { key: 'phoneNumber', label: t('channels.phoneNumber'), type: 'text', placeholder: '+1234567890' },
+                    { key: 'apiKey', label: t('channels.apiKey'), type: 'password', placeholder: 'Your WhatsApp API Key' }
+                ]
+            }
+        ]
 
     const handleSave = (channelConfig: any, setConfig: any) => {
         setConfig({ ...channelConfig, active: true })
@@ -134,7 +143,7 @@ export default function ChannelsPage() {
                                         </label>
                                         <input
                                             type={field.type}
-                                            value={channel.config[field.key as keyof typeof channel.config] as string}
+                                            value={channel.config[field.key] as string}
                                             onChange={(e) => channel.setConfig({
                                                 ...channel.config,
                                                 [field.key]: e.target.value

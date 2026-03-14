@@ -8,7 +8,7 @@ import { formatDate } from '../utils/formatters'
 
 export default function AnalyticsPage() {
     const { t } = useTranslation()
-    const { data: analytics, isLoading } = useQuery('analytics', async () => {
+    const { data: analytics } = useQuery('analytics', async () => {
         const response = await api.get('/analytics/queries/')
         return response.data
     })
@@ -75,8 +75,8 @@ export default function AnalyticsPage() {
                                         <stat.icon className="w-6 h-6" />
                                     </div>
                                     <div className={`flex items-center gap-1 text-sm font-bold px-3 py-1 rounded-full ${stat.trendUp
-                                            ? 'text-emerald-700 bg-emerald-100'
-                                            : 'text-red-700 bg-red-100'
+                                        ? 'text-emerald-700 bg-emerald-100'
+                                        : 'text-red-700 bg-red-100'
                                         }`}>
                                         {stat.trendUp ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
                                         {stat.trend}

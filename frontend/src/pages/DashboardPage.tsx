@@ -8,7 +8,7 @@ import api from '../services/api'
 
 export default function DashboardPage() {
     const { t } = useTranslation()
-    const { data: stats, isLoading } = useQuery('dashboard-stats', async () => {
+    const { data: stats } = useQuery('dashboard-stats', async () => {
         const response = await api.get('/analytics/dashboard/')
         return response.data
     })
