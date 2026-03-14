@@ -1,0 +1,7 @@
+{
+    "name": "AI Chatbot API",
+    "dockerComposeFile": "../docker-compose.yml",
+    "service": "api",
+    "workspaceFolder": "/app",
+    "shutdownAction": "stopCompose"
+}
