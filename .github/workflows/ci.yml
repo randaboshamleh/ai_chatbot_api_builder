@@ -62,22 +62,24 @@ jobs:
                       celery==5.3.6 \
                       redis==5.0.1 \
                       pypdf==4.0.2 \
-                      python-docx==1.1.0
+                      python-docx==1.1.0 \
+                      Pillow==10.2.0 \
+                      packaging
           echo "Dependencies installed successfully."
           echo "Installing lightweight stubs for optional heavy dependencies..."
-          pip install ollama || pip install --quiet "ollama>=0.1.7" || true
+          pip install ollama || true
           echo "Stub installation complete."
 
       - name: Run database migrations
         run: |
           echo "Running migrations on SQLite test database..."
-          python manage.py migrate --settings=config.settings.ci
+          python manage.py migrate --settings=config.settings.ci -v 2
           echo "Migrations complete."
 
       - name: Run tests
         run: |
           echo "Running Django test suite..."
-          python manage.py test apps.tests --settings=config.settings.ci --verbosity=2
+          python manage.py test apps.tests --settings=config.settings.ci --verbosity=2 2>&1
           echo "All tests passed."
 
   # ─────────────────────────────────────────────
@@ -117,7 +119,7 @@ jobs:
         run: |
           echo "Building frontend for production..."
           cd frontend
-          npm run build
+          npx vite build
           echo "Frontend build successful."
 
   # ─────────────────────────────────────────────
