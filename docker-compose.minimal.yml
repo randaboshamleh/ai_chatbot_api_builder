@@ -1,0 +1,22 @@
+services:
+  # ───────────────────────────────
+  # ChromaDB only (using existing image)
+  # ───────────────────────────────
+  chromadb:
+    image: chromadb/chroma:0.5.23
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+    volumes:
+      - chroma_data:/chroma/chroma
+    ports:
+      - "8001:8000"
+    networks:
+      - internal
+
+volumes:
+  chroma_data:
+
+networks:
+  internal:
+    driver: bridge
