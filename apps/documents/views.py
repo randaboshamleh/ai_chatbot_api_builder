@@ -11,7 +11,6 @@ from apps.documents.models import Document
 from apps.documents.serializers import DocumentSerializer, DocumentUploadSerializer
 from apps.documents.permissions import IsTenantMember,IsTenantAdminOrOwner
 from core.rag.vector_store import TenantVectorStore
-from workers.tasks import process_document_task
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +80,11 @@ class DocumentUploadView(APIView):
         )
 
         # بدء المعالجة بشكل غير متزامن
-        process_document_task.delay(str(document.id))
+        try:
+            from workers.tasks import process_document_task
+            process_document_task.delay(str(document.id))
+        except ImportError:
+            pass
 
         return Response(
             DocumentSerializer(document).data,
