@@ -69,16 +69,31 @@ jobs:
       - name: Verify settings
         run: python -c "import ci_settings; print('Settings OK:', ci_settings.DATABASES)"
 
+      - name: Debug Django setup
+        run: |
+          python -c "
+          import os, sys
+          os.environ['DJANGO_SETTINGS_MODULE'] = 'ci_settings'
+          print('DJANGO_SETTINGS_MODULE:', os.environ.get('DJANGO_SETTINGS_MODULE'))
+          print('sys.path:', sys.path[:3])
+          import django
+          django.setup()
+          print('Django setup OK')
+          from django.conf import settings
+          print('Settings module:', settings.SETTINGS_MODULE if hasattr(settings, 'SETTINGS_MODULE') else 'N/A')
+          print('DB:', settings.DATABASES)
+          "
+
       - name: Run database migrations
         run: |
           echo "Running migrations on SQLite test database..."
-          python manage.py migrate --settings=ci_settings -v 1
+          DJANGO_SETTINGS_MODULE=ci_settings python manage.py migrate -v 1
           echo "Migrations complete."
 
       - name: Run tests
         run: |
           echo "Running Django test suite..."
-          python manage.py test apps.tests --settings=ci_settings --verbosity=2
+          DJANGO_SETTINGS_MODULE=ci_settings python manage.py test apps.tests --verbosity=2
           echo "All tests passed."
 
   # ─────────────────────────────────────────────
