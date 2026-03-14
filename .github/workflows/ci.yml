@@ -33,7 +33,7 @@ jobs:
     needs: gitleaks
 
     env:
-      DJANGO_SETTINGS_MODULE: config.settings.ci
+      DJANGO_SETTINGS_MODULE: ci_settings
       SECRET_KEY: ci-test-secret-key-not-for-production
       DEBUG: "True"
 
@@ -49,7 +49,6 @@ jobs:
 
       - name: Install dependencies
         run: |
-          echo "Installing Python dependencies..."
           pip install --upgrade pip
           pip install django==4.2.9 \
                       djangorestframework==3.14.0 \
@@ -65,29 +64,21 @@ jobs:
                       python-docx==1.1.0 \
                       Pillow==10.2.0 \
                       packaging
-          echo "Dependencies installed successfully."
-          echo "Installing lightweight stubs for optional heavy dependencies..."
           pip install ollama || true
-          echo "Stub installation complete."
 
-      - name: Ensure package __init__.py files exist
-        run: |
-          echo "# settings package" > config/settings/__init__.py
-          echo "# config package" > config/__init__.py
-          ls -la config/
-          ls -la config/settings/
-          python -c "import sys; sys.path.insert(0, '.'); import config.settings.ci; print('Settings import OK')"
+      - name: Verify settings
+        run: python -c "import ci_settings; print('Settings OK:', ci_settings.DATABASES)"
 
       - name: Run database migrations
         run: |
           echo "Running migrations on SQLite test database..."
-          python manage.py migrate --settings=config.settings.ci -v 1
+          python manage.py migrate --settings=ci_settings -v 1
           echo "Migrations complete."
 
       - name: Run tests
         run: |
           echo "Running Django test suite..."
-          python manage.py test apps.tests --settings=config.settings.ci --verbosity=2
+          python manage.py test apps.tests --settings=ci_settings --verbosity=2
           echo "All tests passed."
 
   # ─────────────────────────────────────────────
