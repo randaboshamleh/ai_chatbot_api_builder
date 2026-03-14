@@ -1,1 +1,1 @@
-# Settings package
+# settings package

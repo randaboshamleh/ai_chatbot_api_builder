@@ -70,29 +70,24 @@ jobs:
           pip install ollama || true
           echo "Stub installation complete."
 
-      - name: Verify settings package
+      - name: Ensure package __init__.py files exist
         run: |
-          echo "Python version:"
-          python --version
-          echo "Checking config package structure:"
+          echo "# settings package" > config/settings/__init__.py
+          echo "# config package" > config/__init__.py
           ls -la config/
           ls -la config/settings/
-          echo "Checking __init__.py files:"
-          cat config/__init__.py || echo "(empty)"
-          cat config/settings/__init__.py || echo "(empty)"
-          echo "Verifying Python can import settings:"
           python -c "import sys; sys.path.insert(0, '.'); import config.settings.ci; print('Settings import OK')"
 
       - name: Run database migrations
         run: |
           echo "Running migrations on SQLite test database..."
-          python -m django migrate --settings=config.settings.ci -v 1
+          python manage.py migrate --settings=config.settings.ci -v 1
           echo "Migrations complete."
 
       - name: Run tests
         run: |
           echo "Running Django test suite..."
-          python -m django test apps.tests --settings=config.settings.ci --verbosity=2
+          python manage.py test apps.tests --settings=config.settings.ci --verbosity=2
           echo "All tests passed."
 
   # ─────────────────────────────────────────────
