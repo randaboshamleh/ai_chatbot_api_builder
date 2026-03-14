@@ -87,6 +87,8 @@ jobs:
       - name: Run database migrations
         run: |
           echo "Running migrations on SQLite test database..."
+          find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+          find . -name "*.pyc" -delete 2>/dev/null || true
           DJANGO_SETTINGS_MODULE=ci_settings python manage.py migrate -v 1
           echo "Migrations complete."
 
