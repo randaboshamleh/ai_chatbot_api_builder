@@ -1,0 +1,26 @@
+# Gitleaks configuration
+# Suppress known false positives in this project
+
+title = "AI Chatbot API Builder - Gitleaks Config"
+
+[allowlist]
+description = "Global allowlist"
+regexes = [
+    # Django insecure keys are intentional placeholders for development
+    '''django-insecure-[a-zA-Z0-9\-]+''',
+    # CI placeholder secret key
+    '''ci-test-secret-key''',
+    # Example/placeholder values
+    '''change-me''',
+    '''your-domain\.com''',
+    '''example@company\.com''',
+]
+
+paths = [
+    # Ignore example files
+    '''.env.example''',
+    # Ignore test files (contain dummy credentials)
+    '''apps/tests/''',
+    # Ignore CI settings generated at runtime
+    '''config/settings/ci\.py''',
+]
