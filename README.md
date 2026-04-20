@@ -2,7 +2,7 @@
 
 نظام شات بوت ذكي متعدد المستأجرين مع RAG (Retrieval-Augmented Generation) باستخدام Django و Ollama.
 
-[![CI/CD Pipeline](https://github.com/YOUR_USERNAME/assistify/workflows/CI%20Pipeline/badge.svg)](https://github.com/YOUR_USERNAME/assistify/actions)
+[![CI/CD Pipeline](https://github.com/randaboshamleh/ai_chatbot_api_builder/actions/workflows/ci.yml/badge.svg)](https://github.com/randaboshamleh/ai_chatbot_api_builder/actions/workflows/ci.yml)
 [![Tests](https://img.shields.io/badge/tests-75%2B%20passing-brightgreen)](./TESTING.md)
 [![Coverage](https://img.shields.io/badge/coverage-80%25-green)](./htmlcov/index.html)
 [![Python](https://img.shields.io/badge/python-3.11-blue)](https://www.python.org/)
@@ -19,6 +19,7 @@ This project includes comprehensive testing following industry best practices:
 - **✅ E2E Tests**: 34 Playwright tests for complete user journeys (NEW!)
 - **✅ CI/CD Pipeline**: Automated testing with GitHub Actions
 - **✅ Security**: GitLeaks scanning for secrets
+- **✅ Performance Results**: Latest measured results documented in `tests/performance/ACTUAL_TEST_RESULTS.md`
 
 ### Quick Test Commands
 
@@ -40,6 +41,9 @@ cd frontend
 npm run test:e2e          # Run all E2E tests
 npm run test:e2e:ui       # Interactive UI mode
 npm run test:e2e:headed   # See browser in action
+
+# CI smoke E2E (same profile used in pipeline)
+npm run test:e2e -- --grep @smoke
 ```
 
 📚 **Full Testing Documentation**: See [TESTING.md](./TESTING.md) for detailed information.  
@@ -325,6 +329,14 @@ This project was developed as part of the Software Testing course at Syrian Priv
 **Instructor**: Eng. Mohamed Al Balkhi  
 **Year**: 2026
 
+## 👥 Team Members
+
+- `randaboshamleh` (individual submission)
+
+## 🔗 Repository
+
+- https://github.com/randaboshamleh/ai_chatbot_api_builder
+
 ---
 
-**Last Updated**: 2026-04-16
+**Last Updated**: 2026-04-20

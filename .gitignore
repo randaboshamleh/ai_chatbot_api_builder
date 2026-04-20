@@ -53,3 +53,8 @@ Thumbs.db
 .coverage
 htmlcov/
 .pytest_cache/
+tests/performance/*.html
+tests/performance/*.csv
+tests/performance/locust-results-local_*
+tests/performance/__pycache__/
+tests/e2e/node_modules/

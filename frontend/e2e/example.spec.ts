@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 
 test.describe('Example Tests - Setup Verification', () => {
-    test('loads the landing page', async ({ page }) => {
+    test('@smoke loads the landing page', async ({ page }) => {
         await page.goto('/')
 
         await expect(page).toHaveTitle(/AI Chatbot/i)
