@@ -4,7 +4,7 @@ import logging
 import re
 from typing import List, Dict, Any, Tuple
 
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import (
     PyPDFLoader,
     Docx2txtLoader,
