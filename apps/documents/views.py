@@ -83,7 +83,8 @@ class DocumentUploadView(APIView):
         try:
             from workers.tasks import process_document_task
             process_document_task.delay(str(document.id))
-        except ImportError:
+        except Exception:
+            # Task failure doesn't affect the upload response
             pass
 
         return Response(
