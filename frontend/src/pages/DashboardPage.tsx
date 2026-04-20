@@ -1,17 +1,40 @@
 import { useQuery } from 'react-query'
 import { useTranslation } from 'react-i18next'
-import { FileText, MessageSquare, Users, TrendingUp, ArrowUpRight, Sparkles, Zap, Target } from 'lucide-react'
+import { FileText, MessageSquare, Users, TrendingUp, ArrowUpRight, Sparkles, Zap, Target, ShieldAlert } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import DashboardLayout from '../components/Layout/DashboardLayout'
 import api from '../services/api'
+import { useAuthStore } from '../stores/authStore'
 
 export default function DashboardPage() {
-    const { t } = useTranslation()
-    const { data: stats } = useQuery('dashboard-stats', async () => {
+    const { t, i18n } = useTranslation()
+    const { user } = useAuthStore()
+    const hasTenantWorkspace = Boolean(user?.tenant_name)
+
+    const { data: stats, isError } = useQuery(['dashboard-stats', user?.id], async () => {
         const response = await api.get('/analytics/dashboard/')
         return response.data
+    }, {
+        enabled: hasTenantWorkspace,
+        retry: (failureCount, error: any) => {
+            const status = error?.response?.status
+            if (status === 401 || status === 403) {
+                return false
+            }
+            return failureCount < 2
+        },
     })
+
+    const tenantAlertTitle = i18n.language === 'ar'
+        ? 'الحساب غير مرتبط بمساحة شركة'
+        : 'Account is not linked to a tenant workspace'
+    const tenantAlertDescription = i18n.language === 'ar'
+        ? 'هذا الحساب لا يملك tenant، لذلك لا يمكن تحميل إحصائيات لوحة التحكم. سجّل بحساب شركة أو أنشئ حسابًا جديدًا.'
+        : 'This user has no tenant, so dashboard analytics cannot be loaded. Sign in with a tenant account or create a new one.'
+    const loadErrorTitle = i18n.language === 'ar'
+        ? 'تعذّر تحميل بيانات لوحة التحكم'
+        : 'Unable to load dashboard data'
 
     const quickActions = [
         {
@@ -97,6 +120,24 @@ export default function DashboardPage() {
                         </p>
                     </div>
                 </motion.div>
+
+                {!hasTenantWorkspace && (
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
+                        <div className="flex items-start gap-3">
+                            <ShieldAlert className="w-5 h-5 mt-0.5" />
+                            <div>
+                                <p className="font-bold">{tenantAlertTitle}</p>
+                                <p className="text-sm mt-1">{tenantAlertDescription}</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {hasTenantWorkspace && isError && (
+                    <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-800">
+                        <p className="font-semibold">{loadErrorTitle}</p>
+                    </div>
+                )}
 
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

@@ -1,10 +1,9 @@
-from django.contrib.auth import authenticate
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-
+from apps.tenants.models import TenantUser
 from .serializers import TenantRegistrationSerializer, LoginSerializer, UserSerializer
 
 
@@ -29,15 +28,21 @@ class LoginView(APIView):
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = authenticate(
-            username=serializer.validated_data['username'],
-            password=serializer.validated_data['password'],
-        )
-        if not user:
+
+        user = TenantUser.objects.filter(username=serializer.validated_data['username']).first()
+
+        if not user or not user.check_password(serializer.validated_data['password']):
             return Response(
                 {'error': 'بيانات الدخول غير صحيحة'},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
+
+        if not user.tenant_id:
+            return Response(
+                {'error': 'This account is not linked to a tenant workspace. Please register a new tenant account.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         refresh = RefreshToken.for_user(user)
         return Response({
             'access': str(refresh.access_token),

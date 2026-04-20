@@ -5,10 +5,10 @@ django-tenants==3.5.0
 drf-yasg==1.21.7
 celery==5.3.6
 redis==5.0.1
-langchain==0.1.9
-langchain-community==0.0.24
-langchain-core==0.1.28
-langchain-text-splitters>=0.3.0
+langchain==0.3.0
+langchain-community==0.3.0
+langchain-core==0.3.0
+langchain-text-splitters==0.3.0
 chromadb==0.5.23
 ollama>=0.1.7
 sentence-transformers==2.3.1

@@ -5,10 +5,7 @@ from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from rest_framework.views import APIView
-from rest_framework.response import Response
-from apps.tenants.models import Tenant, TenantChannel
-from apps.chatbot.models import ChatSession, ChatMessage
-from core.rag.pipeline import RAGPipeline
+from apps.tenants.models import TenantChannel
 
 logger = logging.getLogger(__name__)
 
@@ -32,71 +29,47 @@ class TelegramWebhookView(APIView):
         message = data.get('message', {})
         chat_id = message.get('chat', {}).get('id')
         text = message.get('text', '').strip()
-        voice = message.get('voice')
 
         if not chat_id:
             return HttpResponse(status=200)
 
-        # Voice message
-        if voice and channel.input_mode in ['voice', 'both']:
-            text = _transcribe_telegram_voice(voice, channel.telegram_token)
+        # Handle /start command
+        if text == '/start':
+            _send_telegram_message(
+                channel.telegram_token,
+                chat_id,
+                "مرحباً! أنا مساعدك الذكي. أرسل سؤالك وسأجيبك بناءً على الوثائق المتاحة.\n\nHello! I'm your AI assistant. Send me a question and I'll answer based on the available documents."
+            )
+            return HttpResponse(status=200)
 
         if not text:
             return HttpResponse(status=200)
 
-        # RAG
+        # Dispatch async Celery task - return 200 immediately to Telegram
         try:
-            session, _ = ChatSession.objects.get_or_create(
-                tenant=channel.tenant,
-                defaults={'tenant': channel.tenant}
+            from workers.tasks import process_telegram_message
+            process_telegram_message.delay(
+                str(tenant_id),
+                chat_id,
+                text,
+                channel.telegram_token,
             )
-            pipeline = RAGPipeline(tenant=channel.tenant)
-            result = pipeline.query(text)
-
-            ChatMessage.objects.create(session=session, role='user', content=text)
-            ChatMessage.objects.create(
-                session=session, role='assistant',
-                content=result['answer'], sources=result['sources']
-            )
-
-            _send_telegram_message(channel.telegram_token, chat_id, result['answer'])
         except Exception as e:
-            logger.error(f"Telegram webhook error: {e}")
+            logger.error(f"Failed to dispatch Telegram task: {e}")
             _send_telegram_message(channel.telegram_token, chat_id, "عذراً، حدث خطأ. حاول مرة أخرى.")
 
         return HttpResponse(status=200)
 
 
 def _send_telegram_message(token, chat_id, text):
-    requests.post(
-        f"https://api.telegram.org/bot{token}/sendMessage",
-        json={"chat_id": chat_id, "text": text},
-        timeout=10,
-    )
-
-
-def _transcribe_telegram_voice(voice, token):
     try:
-        file_id = voice['file_id']
-        file_info = requests.get(
-            f"https://api.telegram.org/bot{token}/getFile",
-            params={"file_id": file_id}
-        ).json()
-        file_path = file_info['result']['file_path']
-        audio_url = f"https://api.telegram.org/file/bot{token}/{file_path}"
-        audio_data = requests.get(audio_url).content
-
-        import whisper, tempfile, os
-        model = whisper.load_model("base")
-        with tempfile.NamedTemporaryFile(suffix=".ogg", delete=False) as f:
-            f.write(audio_data)
-            tmp_path = f.name
-        result = model.transcribe(tmp_path)
-        os.unlink(tmp_path)
-        return result['text']
+        requests.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={"chat_id": chat_id, "text": text},
+            timeout=10,
+        )
     except Exception as e:
-        logger.error(f"Voice transcription error: {e}")
-        return ""
+        logger.error(f"Failed to send Telegram message: {e}")
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -146,57 +119,21 @@ class WhatsAppWebhookView(APIView):
 
             if msg_type == 'text':
                 text = message['text']['body']
-            elif msg_type == 'audio' and channel.input_mode in ['voice', 'both']:
-                audio_id = message['audio']['id']
-                text = _transcribe_whatsapp_voice(audio_id, channel.whatsapp_token)
 
             if not text:
                 return HttpResponse(status=200)
 
-            pipeline = RAGPipeline(tenant=channel.tenant)
-            result = pipeline.query(text)
-            _send_whatsapp_message(channel, phone, result['answer'])
+            # Dispatch async
+            from workers.tasks import process_whatsapp_message
+            process_whatsapp_message.delay(
+                str(tenant_id),
+                phone,
+                text,
+                channel.whatsapp_token,
+                channel.whatsapp_phone_id,
+            )
 
         except Exception as e:
             logger.error(f"WhatsApp webhook error: {e}")
 
         return HttpResponse(status=200)
-
-
-def _send_whatsapp_message(channel, phone, text):
-    requests.post(
-        f"https://graph.facebook.com/v18.0/{channel.whatsapp_phone_id}/messages",
-        headers={"Authorization": f"Bearer {channel.whatsapp_token}"},
-        json={
-            "messaging_product": "whatsapp",
-            "to": phone,
-            "type": "text",
-            "text": {"body": text},
-        },
-        timeout=10,
-    )
-
-
-def _transcribe_whatsapp_voice(audio_id, token):
-    try:
-        media_url = requests.get(
-            f"https://graph.facebook.com/v18.0/{audio_id}",
-            headers={"Authorization": f"Bearer {token}"},
-        ).json().get('url')
-
-        audio_data = requests.get(
-            media_url,
-            headers={"Authorization": f"Bearer {token}"},
-        ).content
-
-        import whisper, tempfile, os
-        model = whisper.load_model("base")
-        with tempfile.NamedTemporaryFile(suffix=".ogg", delete=False) as f:
-            f.write(audio_data)
-            tmp_path = f.name
-        result = model.transcribe(tmp_path)
-        os.unlink(tmp_path)
-        return result['text']
-    except Exception as e:
-        logger.error(f"WhatsApp voice error: {e}")
-        return ""

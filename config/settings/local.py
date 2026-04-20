@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
+    'drf_yasg',
     'corsheaders',
     'apps.tenants',
     'apps.authentication',
@@ -107,12 +108,9 @@ USE_TZ = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# CORS
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost",
-    "http://localhost:3000",
-    "http://127.0.0.1",
-]
+# CORS - allow all for local development
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
 
 # إعدادات التطوير المحلي
 DEBUG = True

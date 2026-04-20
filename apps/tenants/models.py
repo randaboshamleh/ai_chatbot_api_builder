@@ -16,7 +16,7 @@ class Tenant(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
     subdomain = models.SlugField(unique=True)
-    logo = models.ImageField(upload_to='tenants/logos/', blank=True, null=True)
+    logo = models.FileField(upload_to='tenants/logos/', blank=True, null=True)
     contact_email = models.EmailField(blank=True)
     api_key = models.CharField(max_length=64, unique=True)
     

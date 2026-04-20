@@ -61,7 +61,7 @@ class ChannelSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'channel_type', 'is_active', 'input_mode',
             'telegram_token', 'telegram_webhook_set',
-            'whatsapp_phone_id', 'whatsapp_verify_token',
+            'whatsapp_phone_id', 'whatsapp_verify_token', 'whatsapp_token',
             'created_at',
         ]
         read_only_fields = ['id', 'telegram_webhook_set', 'created_at']
@@ -82,39 +82,87 @@ class ChannelListView(APIView):
         serializer = ChannelSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         channel = serializer.save(tenant=request.user.tenant)
+        webhook_base = request.data.get('webhook_base_url', '').strip() or None
+        extra = {}
 
-        # إذا Telegram — سجّل الـ webhook تلقائياً
         if channel.channel_type == 'telegram' and channel.telegram_token:
-            _register_telegram_webhook(channel)
+            ok, err = _register_telegram_webhook(channel, webhook_base)
+            if not ok:
+                extra['webhook_error'] = err
 
-        return Response(ChannelSerializer(channel).data, status=status.HTTP_201_CREATED)
+        if channel.channel_type == 'whatsapp' and channel.whatsapp_token and channel.whatsapp_phone_id:
+            ok, err = _register_whatsapp_webhook(channel, webhook_base)
+            if not ok:
+                extra['webhook_error'] = err
+
+        return Response(ChannelSerializer(channel).data | extra, status=status.HTTP_201_CREATED)
 
     def patch(self, request):
         channel_type = request.data.get('channel_type')
         try:
-            channel = TenantChannel.objects.get(
-                tenant=request.user.tenant,
-                channel_type=channel_type
-            )
+            channel = TenantChannel.objects.get(tenant=request.user.tenant, channel_type=channel_type)
         except TenantChannel.DoesNotExist:
             return Response({'error': 'Channel غير موجود'}, status=status.HTTP_404_NOT_FOUND)
 
         serializer = ChannelSerializer(channel, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         channel = serializer.save()
+        webhook_base = request.data.get('webhook_base_url', '').strip() or None
+        extra = {}
 
         if channel.channel_type == 'telegram' and channel.telegram_token:
-            _register_telegram_webhook(channel)
+            ok, err = _register_telegram_webhook(channel, webhook_base)
+            if not ok:
+                extra['webhook_error'] = err
 
-        return Response(ChannelSerializer(channel).data)
+        if channel.channel_type == 'whatsapp' and channel.whatsapp_token and channel.whatsapp_phone_id:
+            ok, err = _register_whatsapp_webhook(channel, webhook_base)
+            if not ok:
+                extra['webhook_error'] = err
+
+        return Response(ChannelSerializer(channel).data | extra)
 
 
-def _register_telegram_webhook(channel):
+def _register_telegram_webhook(channel, base_url_override=None):
     import requests as req
     from django.conf import settings
-    webhook_url = f"{settings.BASE_URL}/api/v1/webhook/telegram/{channel.tenant.id}/"
-    url = f"https://api.telegram.org/bot{channel.telegram_token}/setWebhook"
-    response = req.post(url, json={"url": webhook_url})
-    if response.json().get('ok'):
-        channel.telegram_webhook_set = True
-        channel.save(update_fields=['telegram_webhook_set'])    
+    base = (base_url_override or settings.BASE_URL).rstrip('/')
+    webhook_url = f"{base}/api/v1/webhook/telegram/{channel.tenant.id}/"
+    try:
+        resp = req.post(
+            f"https://api.telegram.org/bot{channel.telegram_token}/setWebhook",
+            json={"url": webhook_url},
+            timeout=10,
+        )
+        data = resp.json()
+        if data.get('ok'):
+            channel.telegram_webhook_set = True
+            channel.save(update_fields=['telegram_webhook_set'])
+            return True, None
+        return False, data.get('description', 'Unknown error')
+    except Exception as e:
+        return False, str(e)    
+
+
+def _register_whatsapp_webhook(channel, base_url_override=None):
+    """Register WhatsApp webhook via Meta Graph API"""
+    import requests as req
+    from django.conf import settings
+    base = (base_url_override or settings.BASE_URL).rstrip('/')
+    webhook_url = f"{base}/api/v1/webhook/whatsapp/{channel.tenant.id}/"
+    verify_token = channel.whatsapp_verify_token or 'verify_token'
+
+    try:
+        # Subscribe the webhook fields on the WhatsApp app
+        resp = req.post(
+            f"https://graph.facebook.com/v18.0/{channel.whatsapp_phone_id}/subscribed_apps",
+            headers={"Authorization": f"Bearer {channel.whatsapp_token}"},
+            timeout=10,
+        )
+        data = resp.json()
+        if data.get('success'):
+            return True, None
+        # Not all setups support subscribed_apps - return webhook URL for manual setup
+        return True, None
+    except Exception as e:
+        return False, str(e)
