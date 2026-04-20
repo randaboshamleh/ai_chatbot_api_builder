@@ -50,13 +50,18 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest pytest-django pytest-cov
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install pytest pytest-django pytest-cov
+
+      - name: Verify test tooling
+        run: |
+          python --version
+          python -m pytest --version
 
       - name: Run Unit Tests with Coverage
         run: |
-          pytest apps/tests/test_unit.py -v --cov=apps --cov=core --cov-report=term --cov-report=html
+          python -m pytest apps/tests/test_unit.py -v --cov=apps --cov=core --cov-report=term --cov-report=html
           echo "✅ Unit tests passed"
 
       - name: Upload coverage report
@@ -89,9 +94,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest pytest-django
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install pytest pytest-django
 
       - name: Run migrations
         run: |
@@ -99,7 +104,7 @@ jobs:
 
       - name: Run Integration Tests
         run: |
-          pytest apps/tests/test_integration.py -v
+          python -m pytest apps/tests/test_integration.py -v
           echo "✅ Integration tests passed"
 
   # ═══════════════════════════════════════════════════════════════
