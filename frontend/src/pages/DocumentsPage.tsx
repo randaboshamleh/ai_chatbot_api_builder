@@ -115,6 +115,7 @@ export default function DocumentsPage() {
                                 </div>
                                 <input
                                     type="file"
+                                    data-testid="document-file-input"
                                     onChange={handleFileSelect}
                                     accept=".pdf,.docx,.txt"
                                     className="hidden"
@@ -123,6 +124,7 @@ export default function DocumentsPage() {
                             <button
                                 onClick={handleUpload}
                                 disabled={!selectedFile || uploadMutation.isLoading}
+                                data-testid="document-upload-button"
                                 className="px-8 py-4 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-xl hover:from-primary-700 hover:to-primary-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-semibold shadow-lg shadow-primary-200 flex items-center gap-2"
                             >
                                 {uploadMutation.isLoading ? (
@@ -156,6 +158,7 @@ export default function DocumentsPage() {
                                 return (
                                     <motion.div
                                         key={doc.id}
+                                        data-testid={`document-card-${doc.id}`}
                                         initial={{ opacity: 0, scale: 0.95 }}
                                         animate={{ opacity: 1, scale: 1 }}
                                         exit={{ opacity: 0, scale: 0.95 }}
@@ -172,6 +175,7 @@ export default function DocumentsPage() {
                                                 <button
                                                     onClick={() => deleteMutation.mutate(doc.id)}
                                                     disabled={deleteMutation.isLoading}
+                                                    data-testid={`document-delete-${doc.id}`}
                                                     className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                                                 >
                                                     <Trash2 className="w-4 h-4" />

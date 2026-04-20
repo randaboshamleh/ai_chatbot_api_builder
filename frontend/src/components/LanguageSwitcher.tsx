@@ -15,11 +15,12 @@ export default function LanguageSwitcher() {
     return (
         <button
             onClick={toggleLanguage}
+            data-testid="language-toggle"
             className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-            title={i18n.language === 'en' ? 'Switch to Arabic' : 'التبديل للإنجليزية'}
+            title={i18n.language === 'en' ? 'Switch to Arabic' : 'Switch to English'}
         >
             <Languages className="w-4 h-4" />
-            <span>{i18n.language === 'en' ? 'العربية' : 'English'}</span>
+            <span>{i18n.language === 'en' ? '�������' : 'English'}</span>
         </button>
     )
 }

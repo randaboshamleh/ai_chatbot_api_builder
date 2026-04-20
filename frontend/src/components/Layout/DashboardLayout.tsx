@@ -92,6 +92,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                                 <Link
                                     key={item.name}
                                     to={item.href}
+                                    data-testid={`nav-${item.href.replace('/', '')}`}
                                     className={`flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition-all ${isActive
                                         ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg'
                                         : 'text-gray-700 hover:bg-white/50'
@@ -109,6 +110,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                         <LanguageSwitcher />
                         <button
                             onClick={handleLogout}
+                            data-testid="logout-button"
                             className="flex items-center w-full px-4 py-3 text-sm font-semibold text-red-600 rounded-xl hover:bg-red-50 transition-all"
                         >
                             <LogOut className={`w-5 h-5 ${i18n.language === 'ar' ? 'ml-3' : 'mr-3'}`} />

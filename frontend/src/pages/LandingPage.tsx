@@ -17,7 +17,7 @@ export default function LandingPage() {
     }, [i18n.language])
 
     return (
-        <div className="min-h-screen bg-white text-gray-900 overflow-x-hidden selection:bg-primary-100 selection:text-primary-900">
+        <div className="min-h-screen bg-gradient-to-br from-primary-50 to-white text-gray-900 overflow-x-hidden selection:bg-primary-100 selection:text-primary-900">
 
             {/* Animated Background */}
             <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
@@ -49,10 +49,10 @@ export default function LandingPage() {
 
                         <div className="flex items-center gap-4">
                             <LanguageSwitcher />
-                            <Link to="/login" className="font-medium text-gray-600 hover:text-primary-600 transition-colors">
+                            <Link to="/login" data-testid="landing-login-link" className="font-medium text-gray-600 hover:text-primary-600 transition-colors">
                                 {t('common.login')}
                             </Link>
-                            <Link to="/register" className="px-6 py-2.5 bg-primary-600 text-white rounded-xl font-semibold shadow-lg shadow-primary-200 hover:bg-primary-700 hover:-translate-y-0.5 transition-all">
+                            <Link to="/register" data-testid="landing-register-link" className="px-6 py-2.5 bg-primary-600 text-white rounded-xl font-semibold shadow-lg shadow-primary-200 hover:bg-primary-700 hover:-translate-y-0.5 transition-all">
                                 {t('landing.getStarted')}
                             </Link>
                         </div>
@@ -96,7 +96,7 @@ export default function LandingPage() {
                         variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
                         className="flex flex-col sm:flex-row gap-4 justify-center"
                     >
-                        <Link to="/register" className="px-10 py-4 bg-gray-900 text-white rounded-2xl text-lg font-bold hover:bg-gray-800 transition-all flex items-center justify-center gap-2 shadow-xl">
+                        <Link to="/register" data-testid="hero-register-link" className="px-10 py-4 bg-gray-900 text-white rounded-2xl text-lg font-bold hover:bg-gray-800 transition-all flex items-center justify-center gap-2 shadow-xl">
                             {t('landing.startFree')} <ChevronRight className="w-5 h-5" />
                         </Link>
                         <button className="px-10 py-4 bg-white text-gray-700 border-2 border-gray-100 rounded-2xl text-lg font-bold hover:border-primary-200 transition-all">

@@ -1,17 +1,40 @@
 import { useQuery } from 'react-query'
-import { BarChart3, TrendingUp, Clock, MessageSquare, ArrowDownRight, ArrowUpRight, Zap, Activity } from 'lucide-react'
+import { BarChart3, TrendingUp, Clock, MessageSquare, ArrowDownRight, ArrowUpRight, Zap, Activity, ShieldAlert } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import DashboardLayout from '../components/Layout/DashboardLayout'
 import api from '../services/api'
 import { formatDate } from '../utils/formatters'
+import { useAuthStore } from '../stores/authStore'
 
 export default function AnalyticsPage() {
-    const { t } = useTranslation()
-    const { data: analytics } = useQuery('analytics', async () => {
+    const { t, i18n } = useTranslation()
+    const { user } = useAuthStore()
+    const hasTenantWorkspace = Boolean(user?.tenant_name)
+
+    const { data: analytics, isError } = useQuery(['analytics', user?.id], async () => {
         const response = await api.get('/analytics/queries/')
         return response.data
+    }, {
+        enabled: hasTenantWorkspace,
+        retry: (failureCount, error: any) => {
+            const status = error?.response?.status
+            if (status === 401 || status === 403) {
+                return false
+            }
+            return failureCount < 2
+        },
     })
+
+    const tenantAlertTitle = i18n.language === 'ar'
+        ? 'الحساب غير مرتبط بمساحة شركة'
+        : 'Account is not linked to a tenant workspace'
+    const tenantAlertDescription = i18n.language === 'ar'
+        ? 'هذا الحساب لا يملك tenant، لذلك لا يمكن تحميل صفحة الإحصائيات.'
+        : 'This user has no tenant, so the analytics page cannot be loaded.'
+    const loadErrorTitle = i18n.language === 'ar'
+        ? 'تعذّر تحميل بيانات الإحصائيات'
+        : 'Unable to load analytics data'
 
     const stats = [
         {
@@ -57,11 +80,30 @@ export default function AnalyticsPage() {
                     </div>
                 </div>
 
+                {!hasTenantWorkspace && (
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
+                        <div className="flex items-start gap-3">
+                            <ShieldAlert className="w-5 h-5 mt-0.5" />
+                            <div>
+                                <p className="font-bold">{tenantAlertTitle}</p>
+                                <p className="text-sm mt-1">{tenantAlertDescription}</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {hasTenantWorkspace && isError && (
+                    <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-800">
+                        <p className="font-semibold">{loadErrorTitle}</p>
+                    </div>
+                )}
+
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {stats.map((stat, i) => (
                         <motion.div
                             key={i}
+                            data-testid="analytics-stat-card"
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: i * 0.1 }}
@@ -93,6 +135,7 @@ export default function AnalyticsPage() {
 
                 {/* Queries Table */}
                 <motion.div
+                    data-testid="analytics-recent-queries"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}

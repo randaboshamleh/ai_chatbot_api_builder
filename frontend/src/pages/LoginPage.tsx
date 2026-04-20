@@ -25,11 +25,7 @@ export default function LoginPage() {
 
         try {
             const response = await authService.login(formData)
-            console.log('Login response:', response)
-            console.log('Access token:', response.access)
-            console.log('Refresh token:', response.refresh)
             login(response.access, response.user, response.refresh)
-            console.log('Token saved to localStorage:', localStorage.getItem('access_token'))
             navigate('/dashboard')
         } catch (err: any) {
             setError(err.response?.data?.error || t('auth.loginError'))
@@ -50,9 +46,12 @@ export default function LoginPage() {
                 </div>
 
                 <div className="bg-white rounded-2xl shadow-xl p-8">
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <form onSubmit={handleSubmit} className="space-y-6" data-testid="login-form">
                         {error && (
-                            <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                            <div
+                                data-testid="auth-error"
+                                className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm"
+                            >
                                 {error}
                             </div>
                         )}
@@ -63,9 +62,11 @@ export default function LoginPage() {
                             </label>
                             <input
                                 type="text"
+                                name="username"
                                 required
                                 value={formData.username}
                                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                                data-testid="login-username"
                                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                                 placeholder="username"
                             />
@@ -77,17 +78,20 @@ export default function LoginPage() {
                             </label>
                             <input
                                 type="password"
+                                name="password"
                                 required
                                 value={formData.password}
                                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                data-testid="login-password"
                                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                placeholder="••••••••"
+                                placeholder="********"
                             />
                         </div>
 
                         <button
                             type="submit"
                             disabled={loading}
+                            data-testid="login-submit"
                             className="w-full py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                         >
                             {loading ? t('auth.loggingIn') : t('common.login')}
@@ -97,7 +101,7 @@ export default function LoginPage() {
                     <div className="mt-6 text-center">
                         <p className="text-gray-600">
                             {t('auth.noAccount')}{' '}
-                            <Link to="/register" className="text-primary-600 hover:text-primary-700 font-medium">
+                            <Link to="/register" className="text-primary-600 hover:text-primary-700 font-medium" data-testid="go-register-link">
                                 {t('auth.registerNow')}
                             </Link>
                         </p>
@@ -105,8 +109,8 @@ export default function LoginPage() {
                 </div>
 
                 <div className="mt-6 text-center">
-                    <Link to="/" className="text-gray-600 hover:text-gray-900">
-                        {i18n.language === 'ar' ? '← ' : '→ '}{t('auth.backToHome')}
+                    <Link to="/" className="text-gray-600 hover:text-gray-900" data-testid="back-home-link">
+                        {t('auth.backToHome')}
                     </Link>
                 </div>
             </div>

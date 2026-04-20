@@ -28,9 +28,19 @@ export default function ChatPage() {
     const hasIndexedDocuments = documents && Array.isArray(documents) && documents.some((doc: any) => doc.status === 'indexed')
     const hasProcessingDocuments = documents && Array.isArray(documents) && documents.some((doc: any) => doc.status === 'processing')
 
+    // Detect if text is Arabic
+    const isArabic = (text: string) => /[\u0600-\u06FF]/.test(text)
+
     const queryMutation = useMutation(chatService.sendQuery, {
         onSuccess: (data) => {
-            setMessages(prev => [...prev, { role: 'assistant', content: data.answer, sources: data.sources }])
+            // Deduplicate sources by filename
+            const uniqueSources = data.sources
+                ? [...new Map(data.sources.map((s: any) => {
+                    const key = typeof s === 'string' ? s : (s.source || s)
+                    return [key, s]
+                })).values()]
+                : []
+            setMessages(prev => [...prev, { role: 'assistant', content: data.answer, sources: uniqueSources }])
         },
         onError: (error: any) => {
             console.error('Chat query error:', error)
@@ -91,6 +101,7 @@ export default function ChatPage() {
                             )}
                             <Link
                                 to="/documents"
+                                data-testid="chat-go-documents-link"
                                 className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-xl hover:from-primary-700 hover:to-primary-800 transition-all shadow-lg shadow-primary-200 font-semibold"
                             >
                                 <Upload className="w-5 h-5" />
@@ -140,13 +151,17 @@ export default function ChatPage() {
                                                     ? 'bg-gradient-to-br from-primary-600 to-primary-700 text-white'
                                                     : 'bg-white border border-gray-200'
                                                     } rounded-2xl px-6 py-4 shadow-sm`}>
-                                                    <p className={`leading-relaxed ${msg.role === 'user' ? 'text-white' : 'text-gray-800'}`}>
+                                                    <p
+                                                        className={`leading-relaxed ${msg.role === 'user' ? 'text-white' : 'text-gray-800'}`}
+                                                        dir={isArabic(msg.content) ? 'rtl' : 'ltr'}
+                                                        style={{ textAlign: isArabic(msg.content) ? 'right' : 'left' }}
+                                                    >
                                                         {msg.content}
                                                     </p>
                                                     {msg.sources && msg.sources.length > 0 && (
-                                                        <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap gap-2">
+                                                        <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap gap-2 items-center">
                                                             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                                                {t('chat.sources')}
+                                                                {t('chat.sources')}:
                                                             </span>
                                                             {msg.sources.map((s: any, i: number) => (
                                                                 <span key={i} className="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded-full font-medium">
@@ -196,11 +211,13 @@ export default function ChatPage() {
                                     onChange={(e) => setInput(e.target.value)}
                                     placeholder={t('chat.askQuestion')}
                                     disabled={!hasIndexedDocuments || queryMutation.isLoading}
+                                    data-testid="chat-input"
                                     className="w-full px-6 py-4 pr-14 glass-effect rounded-2xl focus:ring-2 focus:ring-primary-400 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed text-gray-900 placeholder-gray-500"
                                 />
                                 <button
                                     type="submit"
                                     disabled={!input.trim() || queryMutation.isLoading || !hasIndexedDocuments}
+                                    data-testid="chat-send-button"
                                     className="absolute right-2 top-1/2 -translate-y-1/2 p-3 bg-gradient-to-r from-primary-600 to-cyan-600 text-white rounded-xl hover:from-primary-700 hover:to-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg disabled:shadow-none"
                                 >
                                     <Send className="w-5 h-5" />

@@ -1,8 +1,11 @@
 import axios from 'axios'
 import { useAuthStore } from '../stores/authStore'
 
+// Use relative URL so Vite proxy handles it (no CORS issues)
+const BASE_URL = '/api/v1'
+
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1',
+    baseURL: '/api/v1',
     headers: {
         'Content-Type': 'application/json',
     },
@@ -10,7 +13,7 @@ const api = axios.create({
 
 // Create a separate instance for retry requests to avoid interceptor loops
 const retryApi = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1',
+    baseURL: BASE_URL,
     headers: {
         'Content-Type': 'application/json',
     },
@@ -54,10 +57,14 @@ api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config
+        const requestUrl = originalRequest?.url || ''
+        const isAuthEntryRequest =
+            requestUrl.includes('/auth/login/') ||
+            requestUrl.includes('/auth/register/')
 
         console.log('API Error:', error.response?.status, error.response?.data)
 
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        if (error.response?.status === 401 && !originalRequest._retry && !isAuthEntryRequest) {
             console.log('Got 401 - attempting token refresh')
 
             if (isRefreshing) {
@@ -88,11 +95,9 @@ api.interceptors.response.use(
 
             try {
                 console.log('Attempting to refresh token...')
-                const response = await axios.post(
-                    `${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/auth/token/refresh/`,
-                    { refresh: refreshToken }
-                )
-
+                const response = await retryApi.post('/auth/token/refresh/', {
+                    refresh: refreshToken
+                })
                 const newToken = response.data.access
                 console.log('Token refreshed successfully')
 

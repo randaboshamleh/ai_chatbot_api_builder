@@ -31,8 +31,10 @@ export default function SettingsPage() {
                             </label>
                             <input
                                 type="text"
+                                name="username"
                                 value={user?.username || ''}
                                 disabled
+                                data-testid="settings-username"
                                 className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-600"
                             />
                         </div>
@@ -43,8 +45,10 @@ export default function SettingsPage() {
                             </label>
                             <input
                                 type="email"
+                                name="email"
                                 value={user?.email || ''}
                                 disabled
+                                data-testid="settings-email"
                                 className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-600"
                             />
                         </div>
@@ -67,8 +71,10 @@ export default function SettingsPage() {
                             </label>
                             <input
                                 type="text"
+                                name="tenant_name"
                                 value={user?.tenant_name || ''}
                                 disabled
+                                data-testid="settings-tenant-name"
                                 className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-600"
                             />
                         </div>
