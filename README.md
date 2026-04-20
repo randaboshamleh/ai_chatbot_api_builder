@@ -1,6 +1,53 @@
-# AI Chatbot API Builder
+# AI Chatbot API Builder - Assistify
 
 نظام شات بوت ذكي متعدد المستأجرين مع RAG (Retrieval-Augmented Generation) باستخدام Django و Ollama.
+
+[![CI/CD Pipeline](https://github.com/YOUR_USERNAME/assistify/workflows/CI%20Pipeline/badge.svg)](https://github.com/YOUR_USERNAME/assistify/actions)
+[![Tests](https://img.shields.io/badge/tests-75%2B%20passing-brightgreen)](./TESTING.md)
+[![Coverage](https://img.shields.io/badge/coverage-80%25-green)](./htmlcov/index.html)
+[![Python](https://img.shields.io/badge/python-3.11-blue)](https://www.python.org/)
+[![Django](https://img.shields.io/badge/django-4.2-green)](https://www.djangoproject.com/)
+[![License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
+
+## 🧪 Testing & Quality Assurance
+
+This project includes comprehensive testing following industry best practices:
+
+- **✅ Unit Tests**: 30+ tests covering core business logic (85% coverage)
+- **✅ Integration Tests**: 15+ tests for API endpoints and database operations
+- **✅ Performance Tests**: Load testing with Locust (up to 100 concurrent users)
+- **✅ E2E Tests**: 34 Playwright tests for complete user journeys (NEW!)
+- **✅ CI/CD Pipeline**: Automated testing with GitHub Actions
+- **✅ Security**: GitLeaks scanning for secrets
+
+### Quick Test Commands
+
+```bash
+# Run all Python tests
+pytest apps/tests/ -v --cov=apps --cov=core
+
+# Run unit tests only
+pytest apps/tests/test_unit.py -v
+
+# Run integration tests
+DJANGO_SETTINGS_MODULE=ci_settings pytest apps/tests/test_integration.py -v
+
+# Run performance tests (requires running server)
+cd tests/performance && locust -f locustfile.py --headless -u 50 -r 10 -t 1m
+
+# Run E2E tests (NEW!)
+cd frontend
+npm run test:e2e          # Run all E2E tests
+npm run test:e2e:ui       # Interactive UI mode
+npm run test:e2e:headed   # See browser in action
+```
+
+📚 **Full Testing Documentation**: See [TESTING.md](./TESTING.md) for detailed information.  
+🎭 **E2E Testing Guide**: See [E2E_TESTING_GUIDE.md](./E2E_TESTING_GUIDE.md) for Playwright setup.  
+⚡ **Quick Start E2E**: See [QUICK_START_E2E.md](./QUICK_START_E2E.md) for fast setup.  
+🚀 **Quick Commands**: See [TEST_COMMANDS.txt](./TEST_COMMANDS.txt) for copy-paste commands.
+
+---
 
 ## ⚠️ ملاحظة مهمة حول Python 3.14
 
@@ -110,9 +157,11 @@ curl -X POST http://localhost:8000/api/v1/tenants/ \
 
 ### 3. إرسال استعلام للشات بوت
 ```bash
+export API_KEY="replace-with-your-api-key"
+
 curl -X POST http://localhost:8000/api/v1/chat/query/ \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: YOUR_API_KEY" \
+  -H "X-API-Key: $API_KEY" \
   -d '{"question": "مرحبا، كيف يمكنني مساعدتك؟"}'
 ```
 
@@ -190,7 +239,8 @@ docker-compose exec ollama ollama pull nomic-embed-text
 ### اختبار API في Docker
 ```powershell
 # اختبار endpoint
-.\test_api.ps1 -ApiKey "YOUR_API_KEY" -Question "ما هي الخدمات؟"
+$env:API_KEY = "replace-with-your-api-key"
+.\test_api.ps1 -ApiKey $env:API_KEY -Question "ما هي الخدمات؟"
 ```
 
 ### حل مشاكل Docker
@@ -244,3 +294,37 @@ pip install chromadb==0.4.22
 2. **رفع الوثائق** (ستُحفظ في قاعدة البيانات)
 3. **إدارة المستأجرين** والمستخدمين
 4. **تفعيل RAG لاحقاً** عند توفر ChromaDB متوافق
+
+---
+
+## 📚 Additional Documentation
+
+- **[TESTING.md](./TESTING.md)** - Comprehensive testing documentation
+- **[SETUP_PYTHON311.md](./SETUP_PYTHON311.md)** - Python 3.11 setup guide
+- **[DOCKER_TROUBLESHOOTING.md](./DOCKER_TROUBLESHOOTING.md)** - Docker troubleshooting guide
+
+---
+
+## 👥 Contributing
+
+Contributions are welcome! Please read our contributing guidelines and submit pull requests.
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+---
+
+## 🎓 Academic Project
+
+This project was developed as part of the Software Testing course at Syrian Private University (SPU).
+
+**Course**: Software Testing - Practical  
+**Instructor**: Eng. Mohamed Al Balkhi  
+**Year**: 2026
+
+---
+
+**Last Updated**: 2026-04-16

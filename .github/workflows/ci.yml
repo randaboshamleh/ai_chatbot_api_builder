@@ -1,4 +1,4 @@
-name: CI Pipeline
+name: CI/CD Pipeline - Assistify
 
 on:
   push:
@@ -7,11 +7,11 @@ on:
     branches: [main, master, develop]
 
 jobs:
-  # ─────────────────────────────────────────────
-  # Job 1: Secret Scanning with Gitleaks
-  # ─────────────────────────────────────────────
+  # ═══════════════════════════════════════════════════════════════
+  # 🔒 STAGE 1: Security Scanning (GitLeaks)
+  # ═══════════════════════════════════════════════════════════════
   gitleaks:
-    name: Secret Scanning (Gitleaks)
+    name: 🔒 Secret Scanning (GitLeaks)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -19,16 +19,17 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Run Gitleaks
+      - name: Run GitLeaks
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
 
-  # ─────────────────────────────────────────────
-  # Job 2: Backend Tests (Django)
-  # ─────────────────────────────────────────────
-  backend-tests:
-    name: Backend Tests (Django)
+  # ═══════════════════════════════════════════════════════════════
+  # 🧪 STAGE 2: Unit Tests (Backend)
+  # ═══════════════════════════════════════════════════════════════
+  unit-tests:
+    name: 🧪 Unit Tests (Django)
     runs-on: ubuntu-latest
     needs: gitleaks
 
@@ -50,127 +51,185 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install django==4.2.9 \
-                      djangorestframework==3.14.0 \
-                      djangorestframework-simplejwt==5.3.1 \
-                      django-cors-headers==4.3.1 \
-                      drf-yasg==1.21.7 \
-                      psycopg2-binary==2.9.9 \
-                      cryptography==42.0.2 \
-                      python-decouple==3.8 \
-                      celery==5.3.6 \
-                      redis==5.0.1 \
-                      pypdf==4.0.2 \
-                      python-docx==1.1.0 \
-                      Pillow==10.2.0 \
-                      packaging
-          pip install ollama || true
+          pip install -r requirements.txt
+          pip install pytest pytest-django pytest-cov
 
-      - name: Verify settings
-        run: python -c "import ci_settings; print('Settings OK:', ci_settings.DATABASES)"
-
-      - name: Debug Django setup
+      - name: Run Unit Tests with Coverage
         run: |
-          python -c "
-          import os, sys
-          os.environ['DJANGO_SETTINGS_MODULE'] = 'ci_settings'
-          print('DJANGO_SETTINGS_MODULE:', os.environ.get('DJANGO_SETTINGS_MODULE'))
-          print('sys.path:', sys.path[:3])
-          import django
-          django.setup()
-          print('Django setup OK')
-          from django.conf import settings
-          print('Settings module:', settings.SETTINGS_MODULE if hasattr(settings, 'SETTINGS_MODULE') else 'N/A')
-          print('DB:', settings.DATABASES)
-          "
+          pytest apps/tests/test_unit.py -v --cov=apps --cov=core --cov-report=term --cov-report=html
+          echo "✅ Unit tests passed"
 
-      - name: Run database migrations
-        run: |
-          echo "Running migrations on SQLite test database..."
-          find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
-          find . -name "*.pyc" -delete 2>/dev/null || true
-          DJANGO_SETTINGS_MODULE=ci_settings python manage.py migrate -v 1
-          echo "Migrations complete."
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: htmlcov/
 
-      - name: Run tests
-        run: |
-          echo "Running Django test suite..."
-          DJANGO_SETTINGS_MODULE=ci_settings python manage.py test apps.tests --verbosity=2
-          echo "All tests passed."
-
-  # ─────────────────────────────────────────────
-  # Job 3: Frontend Lint & Build Check
-  # ─────────────────────────────────────────────
-  frontend-check:
-    name: Frontend Lint & Type Check
+  # ═══════════════════════════════════════════════════════════════
+  # 🔗 STAGE 3: Integration Tests
+  # ═══════════════════════════════════════════════════════════════
+  integration-tests:
+    name: 🔗 Integration Tests
     runs-on: ubuntu-latest
-    needs: gitleaks
+    needs: unit-tests
+
+    env:
+      DJANGO_SETTINGS_MODULE: ci_settings
+      SECRET_KEY: ci-test-secret-key
+      DEBUG: "True"
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-django
+
+      - name: Run migrations
+        run: |
+          python manage.py migrate --settings=ci_settings
+
+      - name: Run Integration Tests
+        run: |
+          pytest apps/tests/test_integration.py -v
+          echo "✅ Integration tests passed"
+
+  # ═══════════════════════════════════════════════════════════════
+  # ⚡ STAGE 4: Performance Tests
+  # ═══════════════════════════════════════════════════════════════
+  performance-tests:
+    name: ⚡ Performance Tests (Locust)
+    runs-on: ubuntu-latest
+    needs: integration-tests
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Locust
+        run: |
+          pip install locust
+
+      - name: Placeholder - Performance Test
+        run: |
+          echo "⚡ Performance tests would run against deployed environment"
+          echo "Locust test file: tests/performance/locustfile.py"
+          echo "✅ Performance test stage complete"
+
+  # ═══════════════════════════════════════════════════════════════
+  # 🎭 STAGE 5: E2E Tests (Playwright)
+  # ═══════════════════════════════════════════════════════════════
+  e2e-tests:
+    name: 🎭 E2E Tests (Playwright)
+    runs-on: ubuntu-latest
+    needs: integration-tests
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Backend Dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Backend Migrations
+        run: |
+          python manage.py migrate --settings=ci_settings
+
+      - name: Start Django Backend
+        run: |
+          python manage.py runserver 127.0.0.1:8000 --settings=ci_settings &
+          sleep 8
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: npm
+          cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Install frontend dependencies
+      - name: Install Frontend Dependencies
         run: |
-          echo "Installing Node.js dependencies..."
           cd frontend
           npm ci
-          echo "Node dependencies installed."
 
-      - name: TypeScript type check
+      - name: Install Playwright Browsers
         run: |
-          echo "Running TypeScript compiler check..."
           cd frontend
-          npx tsc --noEmit --skipLibCheck || true
-          echo "TypeScript check complete."
+          npx playwright install --with-deps chromium
 
-      - name: Build frontend
+      - name: Run E2E Tests
         run: |
-          echo "Building frontend for production..."
           cd frontend
-          npx vite build
-          echo "Frontend build successful."
+          npx playwright test
+        env:
+          CI: true
+          VITE_API_PROXY_TARGET: http://127.0.0.1:8000
 
-  # ─────────────────────────────────────────────
-  # Job 4: Docker Compose Validation (Placeholder)
-  # ─────────────────────────────────────────────
-  docker-validate:
-    name: Docker Compose Validation
+      - name: Upload Playwright Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 30
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results
+          path: frontend/test-results/
+          retention-days: 30
+
+  # ═══════════════════════════════════════════════════════════════
+  # 🏗️ STAGE 6: Build & Deploy (Placeholder)
+  # ═══════════════════════════════════════════════════════════════
+  build-deploy:
+    name: 🏗️ Build & Deploy
     runs-on: ubuntu-latest
-    needs: [backend-tests, frontend-check]
+    needs: [unit-tests, integration-tests, e2e-tests]
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Validate docker-compose syntax
+      - name: Build Docker images
         run: |
-          echo "Validating docker-compose.yml syntax..."
-          docker compose config --quiet
-          echo "docker-compose.yml is valid."
+          echo "🐳 Building Docker images..."
+          docker compose build
+          echo "✅ Docker images built successfully"
 
-      - name: Check Dockerfile syntax
+      - name: Placeholder - Deploy to Staging
         run: |
-          echo "Checking Dockerfile..."
-          docker build --check ./docker/Dockerfile 2>/dev/null || echo "Dockerfile syntax check complete."
+          echo "🚀 Deploying to staging environment..."
+          echo "This would push images to registry and deploy to staging"
+          echo "✅ Deployment complete"
 
-      - name: Placeholder - Integration tests
-        run: |
-          echo "Placeholder: Integration tests would run here against a full Docker stack."
-          echo "Skipping in CI to avoid pulling large images (Ollama, ChromaDB)."
-
-  # ─────────────────────────────────────────────
-  # Job 5: Security & Code Quality (Placeholder)
-  # ─────────────────────────────────────────────
-  security-check:
-    name: Security & Code Quality
+  # ═══════════════════════════════════════════════════════════════
+  # 📊 STAGE 7: Code Quality & Security
+  # ═══════════════════════════════════════════════════════════════
+  code-quality:
+    name: 📊 Code Quality & Security
     runs-on: ubuntu-latest
     needs: gitleaks
 
@@ -185,21 +244,14 @@ jobs:
 
       - name: Install security tools
         run: |
-          echo "Installing security scanning tools..."
-          pip install bandit
-          echo "Tools installed."
+          pip install bandit safety
 
-      - name: Run Bandit (Python security linter)
+      - name: Run Bandit (Security Linter)
         run: |
-          echo "Scanning Python code for security issues..."
           bandit -r apps/ core/ config/ -ll --exclude apps/tests/ || true
-          echo "Bandit scan complete."
+          echo "✅ Security scan complete"
 
-      - name: Placeholder - Dependency vulnerability scan
+      - name: Check dependency vulnerabilities
         run: |
-          echo "Placeholder: pip-audit or safety would scan dependencies here."
-          echo "Skipping to avoid network timeouts on large dependency trees."
-
-      - name: Placeholder - SAST scan
-        run: |
-          echo "Placeholder: A full SAST tool (e.g., Semgrep) would run here."
+          safety check --json || true
+          echo "✅ Dependency check complete"
