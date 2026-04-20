@@ -103,5 +103,8 @@ OLLAMA_BASE_URL = 'http://localhost:11434'
 CHROMA_HOST = 'localhost'
 CHROMA_PORT = 8000
 
-CELERY_TASK_ALWAYS_EAGER = True
-CELERY_TASK_EAGER_PROPAGATES = True
+# In CI integration tests we validate API/database behavior, not Celery workers.
+# Running tasks eagerly can execute heavy processing inside Django test transactions
+# and break them on task failures.
+CELERY_TASK_ALWAYS_EAGER = False
+CELERY_TASK_EAGER_PROPAGATES = False

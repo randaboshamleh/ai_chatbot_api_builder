@@ -2,6 +2,7 @@ import hashlib
 import logging
 
 from django.conf import settings
+from django.db import transaction
 from rest_framework import status, generics
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
@@ -80,12 +81,15 @@ class DocumentUploadView(APIView):
         )
 
         # بدء المعالجة بشكل غير متزامن
-        try:
-            from workers.tasks import process_document_task
-            process_document_task.delay(str(document.id))
-        except Exception:
-            # Task failure doesn't affect the upload response
-            pass
+        def enqueue_processing():
+            try:
+                from workers.tasks import process_document_task
+                process_document_task.delay(str(document.id))
+            except Exception:
+                # Task dispatch failure should never break upload response.
+                logger.exception("Failed to enqueue document processing task for document %s", document.id)
+
+        transaction.on_commit(enqueue_processing)
 
         return Response(
             DocumentSerializer(document).data,
