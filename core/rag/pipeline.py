@@ -153,13 +153,20 @@ class RAGPipeline:
 
     def build_hierarchical_context(self, intent: str, detail_chunks: List[Dict]) -> str:
         parts = []
-        global_summaries = self.vector_store.get_summaries(level="global_summary")
-        if global_summaries:
-            parts.append("[Overview]\n" + global_summaries[0]["text"])
-        if intent != "general":
-            section_summaries = self.vector_store.get_summaries(level="section_summary", category=intent)
-            if section_summaries:
-                parts.append(f"[{intent.capitalize()} Summary]\n" + section_summaries[0]["text"])
+        get_summaries = getattr(self.vector_store, "get_summaries", None)
+
+        # Some vector-store backends don't implement hierarchical summaries yet.
+        # In that case we gracefully fall back to detail chunks only.
+        if callable(get_summaries):
+            global_summaries = get_summaries(level="global_summary")
+            if global_summaries:
+                parts.append("[Overview]\n" + global_summaries[0].get("text", ""))
+
+            if intent != "general":
+                section_summaries = get_summaries(level="section_summary", category=intent)
+                if section_summaries:
+                    parts.append(f"[{intent.capitalize()} Summary]\n" + section_summaries[0].get("text", ""))
+
         for i, chunk in enumerate(detail_chunks):
             source = chunk.get("metadata", {}).get("source", "")
             page = chunk.get("metadata", {}).get("page", "")
