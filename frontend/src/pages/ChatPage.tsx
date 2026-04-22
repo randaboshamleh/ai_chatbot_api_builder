@@ -18,10 +18,8 @@ export default function ChatPage() {
         'documents',
         documentService.list,
         {
-            refetchInterval: 2000,
-            refetchOnMount: 'always',
-            refetchOnWindowFocus: true,
-            staleTime: 0,
+            staleTime: 30000, // Cache for 30 seconds
+            refetchOnWindowFocus: false,
         }
     )
 
@@ -120,17 +118,19 @@ export default function ChatPage() {
                                             initial={{ opacity: 0 }}
                                             animate={{ opacity: 1 }}
                                             exit={{ opacity: 0 }}
-                                            className="text-center py-20"
+                                            className="flex items-center justify-center min-h-[50vh] ml-8"
                                         >
-                                            <div className="inline-flex p-6 rounded-3xl bg-gradient-to-br from-primary-50 to-purple-50 mb-6">
-                                                <Sparkles className="w-12 h-12 text-primary-600" />
+                                            <div className="text-center max-w-md">
+                                                <div className="inline-flex p-5 rounded-3xl bg-gradient-to-br from-primary-50 to-purple-50 mb-4">
+                                                    <Sparkles className="w-10 h-10 text-primary-600" />
+                                                </div>
+                                                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                                                    {t('chat.aiAssistant')}
+                                                </h3>
+                                                <p className="text-gray-600 text-sm">
+                                                    {t('chat.startConversation')}
+                                                </p>
                                             </div>
-                                            <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                                                {t('chat.aiAssistant')}
-                                            </h3>
-                                            <p className="text-gray-600">
-                                                {t('chat.startConversation')}
-                                            </p>
                                         </motion.div>
                                     )}
                                     {messages.map((msg, idx) => (
@@ -203,7 +203,7 @@ export default function ChatPage() {
                         </div>
 
                         {/* Input Area */}
-                        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-full max-w-4xl px-4 z-50">
+                        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 z-50 ml-20">
                             <form onSubmit={handleSubmit} className="relative">
                                 <input
                                     type="text"
@@ -212,15 +212,15 @@ export default function ChatPage() {
                                     placeholder={t('chat.askQuestion')}
                                     disabled={!hasIndexedDocuments || queryMutation.isLoading}
                                     data-testid="chat-input"
-                                    className="w-full px-6 py-4 pr-14 glass-effect rounded-2xl focus:ring-2 focus:ring-primary-400 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed text-gray-900 placeholder-gray-500"
+                                    className="w-full px-5 py-3 pr-12 glass-effect rounded-xl focus:ring-2 focus:ring-primary-400 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed text-gray-900 placeholder-gray-500"
                                 />
                                 <button
                                     type="submit"
                                     disabled={!input.trim() || queryMutation.isLoading || !hasIndexedDocuments}
                                     data-testid="chat-send-button"
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-3 bg-gradient-to-r from-primary-600 to-cyan-600 text-white rounded-xl hover:from-primary-700 hover:to-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg disabled:shadow-none"
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 bg-gradient-to-r from-primary-600 to-cyan-600 text-white rounded-lg hover:from-primary-700 hover:to-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg disabled:shadow-none"
                                 >
-                                    <Send className="w-5 h-5" />
+                                    <Send className="w-4 h-4" />
                                 </button>
                             </form>
                         </div>

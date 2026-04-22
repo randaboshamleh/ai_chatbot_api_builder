@@ -17,7 +17,14 @@ export default function DocumentsPage() {
         onSuccess: () => {
             queryClient.invalidateQueries('documents')
             setSelectedFile(null)
+            // إعادة تعيين input
+            const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
+            if (fileInput) fileInput.value = ''
         },
+        onError: (error: any) => {
+            console.error('Upload error:', error)
+            alert(t('documents.uploadError') + ': ' + (error.response?.data?.error || error.message))
+        }
     })
 
     const deleteMutation = useMutation(documentService.delete, {
@@ -106,12 +113,21 @@ export default function DocumentsPage() {
                         </div>
 
                         <div className="flex flex-col sm:flex-row gap-4">
-                            <label className="flex-1 cursor-pointer">
-                                <div className="flex items-center gap-3 px-6 py-4 bg-white border-2 border-gray-200 rounded-xl hover:border-primary-300 transition-all">
-                                    <FileText className="w-5 h-5 text-gray-400" />
-                                    <span className="text-sm text-gray-600 truncate">
-                                        {selectedFile ? selectedFile.name : 'Choose a file...'}
+                            <label className="flex-1 cursor-pointer group">
+                                <div className={`flex items-center gap-3 px-6 py-4 bg-white border-2 rounded-xl transition-all ${selectedFile
+                                    ? 'border-primary-400 bg-primary-50'
+                                    : 'border-gray-200 hover:border-primary-300'
+                                    }`}>
+                                    <FileText className={`w-5 h-5 ${selectedFile ? 'text-primary-600' : 'text-gray-400'}`} />
+                                    <span className={`text-sm font-medium truncate ${selectedFile ? 'text-primary-900' : 'text-gray-500'
+                                        }`}>
+                                        {selectedFile ? selectedFile.name : t('documents.chooseFile')}
                                     </span>
+                                    {selectedFile && (
+                                        <span className="ml-auto text-xs text-primary-600 font-semibold">
+                                            {(selectedFile.size / 1024).toFixed(1)} KB
+                                        </span>
+                                    )}
                                 </div>
                                 <input
                                     type="file"
@@ -125,7 +141,7 @@ export default function DocumentsPage() {
                                 onClick={handleUpload}
                                 disabled={!selectedFile || uploadMutation.isLoading}
                                 data-testid="document-upload-button"
-                                className="px-8 py-4 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-xl hover:from-primary-700 hover:to-primary-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-semibold shadow-lg shadow-primary-200 flex items-center gap-2"
+                                className="px-8 py-4 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-xl hover:from-primary-700 hover:to-primary-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-semibold shadow-lg shadow-primary-200 flex items-center justify-center gap-2 whitespace-nowrap"
                             >
                                 {uploadMutation.isLoading ? (
                                     <>
@@ -182,7 +198,7 @@ export default function DocumentsPage() {
                                                 </button>
                                             </div>
 
-                                            <h3 className="font-bold text-gray-900 mb-2 truncate group-hover:text-primary-600 transition-colors">
+                                            <h3 className="font-bold text-gray-900 mb-2 truncate group-hover:text-primary-600 transition-colors" title={doc.title}>
                                                 {doc.title}
                                             </h3>
 
@@ -191,14 +207,23 @@ export default function DocumentsPage() {
                                                     <StatusIcon className={`w-3.5 h-3.5 ${statusConfig.animate || ''}`} />
                                                     {statusConfig.label}
                                                 </span>
+                                                {doc.status === 'processing' && (
+                                                    <span className="text-xs text-gray-500 animate-pulse">
+                                                        جاري المعالجة...
+                                                    </span>
+                                                )}
                                             </div>
 
                                             <div className="flex items-center justify-between text-sm">
                                                 <span className="text-gray-500">
                                                     {doc.chunk_count} {t('documents.chunks')}
                                                 </span>
-                                                <span className="text-gray-400 text-xs">
-                                                    {new Date(doc.created_at).toLocaleDateString()}
+                                                <span className="text-gray-400 text-xs font-medium">
+                                                    {new Date(doc.created_at).toLocaleDateString('en-GB', {
+                                                        day: '2-digit',
+                                                        month: '2-digit',
+                                                        year: 'numeric'
+                                                    })}
                                                 </span>
                                             </div>
                                         </div>

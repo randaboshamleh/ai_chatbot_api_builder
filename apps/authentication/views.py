@@ -26,29 +26,44 @@ class LoginView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        serializer = LoginSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        try:
+            serializer = LoginSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
 
-        user = TenantUser.objects.filter(username=serializer.validated_data['username']).first()
+            username_or_email = serializer.validated_data['username']
+            password = serializer.validated_data['password']
 
-        if not user or not user.check_password(serializer.validated_data['password']):
+            # Try to find user by username or email
+            user = TenantUser.objects.filter(username=username_or_email).first()
+            if not user:
+                user = TenantUser.objects.filter(email=username_or_email).first()
+
+            if not user or not user.check_password(password):
+                return Response(
+                    {'error': 'بيانات الدخول غير صحيحة'},
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
+
+            if not user.tenant_id:
+                return Response(
+                    {'error': 'This account is not linked to a tenant workspace. Please register a new tenant account.'},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+                'user': UserSerializer(user).data,
+            })
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Login error: {str(e)}")
             return Response(
-                {'error': 'بيانات الدخول غير صحيحة'},
-                status=status.HTTP_401_UNAUTHORIZED,
+                {'error': 'حدث خطأ في تسجيل الدخول'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-
-        if not user.tenant_id:
-            return Response(
-                {'error': 'This account is not linked to a tenant workspace. Please register a new tenant account.'},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
-        refresh = RefreshToken.for_user(user)
-        return Response({
-            'access': str(refresh.access_token),
-            'refresh': str(refresh),
-            'user': UserSerializer(user).data,
-        })
 
 
 class LogoutView(APIView):

@@ -61,7 +61,7 @@ def process_document_task(self, document_id: str):
                     document=document,
                     vector_id=vector_ids[i],
                     chunk_index=i,
-                    content=chunk.page_content,
+                    content=chunk.page_content.replace('\x00', ''),  # إزالة NUL characters
                     metadata=chunk.metadata,
                 )
                 for i, chunk in enumerate(chunks)

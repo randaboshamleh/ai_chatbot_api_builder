@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Zap, Shield, BarChart, ChevronRight, Github, Twitter, Linkedin } from 'lucide-react'
+import { Zap, Shield, BarChart, ChevronRight, Github, Twitter, Linkedin, FileText, MessageSquare, Brain, Building2, TrendingUp, Code, Upload, Cpu, Rocket } from 'lucide-react'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { useEffect } from 'react'
@@ -115,6 +115,111 @@ export default function LandingPage() {
                 </div>
             </section>
 
+            {/* Why Build Chatbot Section */}
+            <section className="container mx-auto px-6 py-20 bg-gradient-to-b from-white to-primary-50/30">
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6 }}
+                    viewport={{ once: true }}
+                    className="text-center mb-16"
+                >
+                    <h2 className="text-4xl md:text-5xl font-black text-gray-900 mb-4">
+                        {t('landing.whyBuildTitle')}
+                    </h2>
+                    <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+                        {t('landing.whyBuildSubtitle')}
+                    </p>
+                </motion.div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <WhyFeatureCard
+                        delay={0.1}
+                        icon={<FileText className="w-7 h-7" />}
+                        title={t('landing.whyFeature1Title')}
+                        description={t('landing.whyFeature1Desc')}
+                        gradient="from-blue-500 to-cyan-500"
+                    />
+                    <WhyFeatureCard
+                        delay={0.2}
+                        icon={<MessageSquare className="w-7 h-7" />}
+                        title={t('landing.whyFeature2Title')}
+                        description={t('landing.whyFeature2Desc')}
+                        gradient="from-purple-500 to-pink-500"
+                    />
+                    <WhyFeatureCard
+                        delay={0.3}
+                        icon={<Brain className="w-7 h-7" />}
+                        title={t('landing.whyFeature3Title')}
+                        description={t('landing.whyFeature3Desc')}
+                        gradient="from-green-500 to-emerald-500"
+                    />
+                    <WhyFeatureCard
+                        delay={0.4}
+                        icon={<Building2 className="w-7 h-7" />}
+                        title={t('landing.whyFeature4Title')}
+                        description={t('landing.whyFeature4Desc')}
+                        gradient="from-orange-500 to-red-500"
+                    />
+                    <WhyFeatureCard
+                        delay={0.5}
+                        icon={<TrendingUp className="w-7 h-7" />}
+                        title={t('landing.whyFeature5Title')}
+                        description={t('landing.whyFeature5Desc')}
+                        gradient="from-indigo-500 to-blue-500"
+                    />
+                    <WhyFeatureCard
+                        delay={0.6}
+                        icon={<Code className="w-7 h-7" />}
+                        title={t('landing.whyFeature6Title')}
+                        description={t('landing.whyFeature6Desc')}
+                        gradient="from-yellow-500 to-orange-500"
+                    />
+                </div>
+            </section>
+
+            {/* How It Works Section */}
+            <section className="container mx-auto px-6 py-20">
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6 }}
+                    viewport={{ once: true }}
+                    className="text-center mb-16"
+                >
+                    <h2 className="text-4xl md:text-5xl font-black text-gray-900 mb-4">
+                        {t('landing.howItWorksTitle')}
+                    </h2>
+                    <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+                        {t('landing.howItWorksSubtitle')}
+                    </p>
+                </motion.div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                    <HowItWorksStep
+                        delay={0.1}
+                        step="1"
+                        icon={<Upload className="w-10 h-10" />}
+                        title={t('landing.step1Title')}
+                        description={t('landing.step1Desc')}
+                    />
+                    <HowItWorksStep
+                        delay={0.2}
+                        step="2"
+                        icon={<Cpu className="w-10 h-10" />}
+                        title={t('landing.step2Title')}
+                        description={t('landing.step2Desc')}
+                    />
+                    <HowItWorksStep
+                        delay={0.3}
+                        step="3"
+                        icon={<Rocket className="w-10 h-10" />}
+                        title={t('landing.step3Title')}
+                        description={t('landing.step3Desc')}
+                    />
+                </div>
+            </section>
+
             {/* Footer */}
             <footer className="bg-gray-50 border-t border-gray-100 pt-16 pb-8 px-6">
                 <div className="container mx-auto">
@@ -175,6 +280,57 @@ function FeatureCard({ icon, title, description, delay, color }: any) {
             <h3 className="text-xl font-bold mb-3">{title}</h3>
             <p className="text-gray-500 leading-relaxed">{description}</p>
             <div className="absolute -bottom-2 -left-2 w-24 h-24 bg-primary-50/50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
+        </motion.div>
+    )
+}
+
+function WhyFeatureCard({ icon, title, description, delay, gradient }: any) {
+    return (
+        <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, delay }}
+            viewport={{ once: true }}
+            whileHover={{ y: -5, transition: { duration: 0.2 } }}
+            className="p-6 bg-white rounded-2xl border border-gray-100 hover:border-gray-200 hover:shadow-xl transition-all group cursor-pointer"
+        >
+            <div className={`w-12 h-12 bg-gradient-to-br ${gradient} rounded-xl flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform duration-300`}>
+                {icon}
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">{title}</h3>
+            <p className="text-gray-600 text-sm leading-relaxed">{description}</p>
+        </motion.div>
+    )
+}
+
+function HowItWorksStep({ step, icon, title, description, delay }: any) {
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay }}
+            viewport={{ once: true }}
+            className="relative"
+        >
+            <motion.div
+                whileHover={{ scale: 1.05 }}
+                transition={{ duration: 0.3 }}
+                className="bg-white rounded-2xl p-8 border-2 border-gray-100 hover:border-primary-200 hover:shadow-xl transition-all group cursor-pointer"
+            >
+                {/* Step Number Badge */}
+                <div className="absolute -top-4 -left-4 w-12 h-12 bg-gradient-to-br from-primary-600 to-cyan-600 rounded-full flex items-center justify-center text-white font-black text-xl shadow-lg">
+                    {step}
+                </div>
+
+                {/* Icon */}
+                <div className="w-16 h-16 bg-gradient-to-br from-primary-50 to-cyan-50 rounded-2xl flex items-center justify-center text-primary-600 mb-6 group-hover:scale-110 transition-transform duration-300">
+                    {icon}
+                </div>
+
+                {/* Content */}
+                <h3 className="text-xl font-bold text-gray-900 mb-3">{title}</h3>
+                <p className="text-gray-600 leading-relaxed">{description}</p>
+            </motion.div>
         </motion.div>
     )
 }

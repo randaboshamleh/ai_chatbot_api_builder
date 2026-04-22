@@ -58,7 +58,7 @@ export default function LoginPage() {
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                {t('auth.email')}
+                                {t('auth.emailOrUsername')}
                             </label>
                             <input
                                 type="text"
@@ -68,7 +68,7 @@ export default function LoginPage() {
                                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                                 data-testid="login-username"
                                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                placeholder="username"
+                                placeholder={i18n.language === 'ar' ? 'البريد الإلكتروني أو اسم المستخدم' : 'email@example.com or username'}
                             />
                         </div>
 

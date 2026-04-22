@@ -7,12 +7,10 @@ export const formatFileSize = (bytes: number): string => {
 }
 
 export const formatDate = (date: string): string => {
-    return new Date(date).toLocaleDateString('ar-SA', {
+    return new Date(date).toLocaleDateString('en-GB', {
         year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
+        month: '2-digit',
+        day: '2-digit',
     })
 }
 

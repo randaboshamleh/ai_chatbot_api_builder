@@ -20,7 +20,7 @@ export default function LanguageSwitcher() {
             title={i18n.language === 'en' ? 'Switch to Arabic' : 'Switch to English'}
         >
             <Languages className="w-4 h-4" />
-            <span>{i18n.language === 'en' ? 'ÇáÚÑÈíÉ' : 'English'}</span>
+            <span>{i18n.language === 'en' ? 'Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©' : 'English'}</span>
         </button>
     )
 }

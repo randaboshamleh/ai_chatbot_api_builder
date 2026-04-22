@@ -53,6 +53,7 @@ class OllamaEmbeddingEngine:
             except Exception as e:
                 logger.error(f"Failed to generate embedding: {e}")
                 embeddings.append([0.0] * 384)  # dummy embedding
+        
         return embeddings
     
     def embed_query(self, text: str) -> List[float]:

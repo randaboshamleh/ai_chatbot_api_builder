@@ -12,6 +12,7 @@ import ChatPage from './pages/ChatPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import SettingsPage from './pages/SettingsPage'
 import ChannelsPage from './pages/ChannelsPage'
+import WebChatDemoPage from './pages/WebChatDemoPage'
 
 const queryClient = new QueryClient()
 
@@ -29,6 +30,7 @@ function App() {
                     <Route path="/" element={<LandingPage />} />
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} />
+                    <Route path="/webchat-demo" element={<WebChatDemoPage />} />
 
                     {/* Private Routes */}
                     <Route path="/dashboard" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />

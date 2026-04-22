@@ -129,9 +129,13 @@ OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://ollama:11434')
 CHROMA_HOST = os.getenv('CHROMA_HOST', 'chromadb')
 CHROMA_PORT = int(os.getenv('CHROMA_PORT', 8000))
 
-# تعطيل Celery للتطوير
-CELERY_TASK_ALWAYS_EAGER = True
-CELERY_TASK_EAGER_PROPAGATES = True
+# Celery Configuration
+# استخدم Redis من Docker Compose
+CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://:redis_pass@redis:6379/0')
+CELERY_RESULT_BACKEND = os.getenv('REDIS_URL', 'redis://:redis_pass@redis:6379/0')
+# تعطيل eager mode لاستخدام Celery worker
+CELERY_TASK_ALWAYS_EAGER = False
+CELERY_TASK_EAGER_PROPAGATES = False
 
 # CORS للتطوير
 CORS_ALLOW_ALL_ORIGINS = True

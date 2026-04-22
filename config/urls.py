@@ -49,4 +49,7 @@ urlpatterns = [
     path('api/v1/', include('apps.chatbot.urls')),
     path('api/v1/', include('apps.tenants.urls')),
     path('api/v1/', include('apps.analytics.urls')),
+    
+    # Public Web Chat API (no authentication required)
+    path('api/v1/webchat/', include('apps.chatbot.web_chat_urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
