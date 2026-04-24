@@ -12,6 +12,9 @@ class ChatSession(models.Model):
     class Meta:
         db_table = 'chat_sessions'
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['tenant', '-created_at'], name='chat_sess_tenant_created_idx'),
+        ]
 
 
 class ChatMessage(models.Model):
@@ -28,3 +31,7 @@ class ChatMessage(models.Model):
     class Meta:
         db_table = 'chat_messages'
         ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['session', 'created_at'], name='chat_msg_session_created_idx'),
+            models.Index(fields=['role', 'created_at'], name='chat_msg_role_created_idx'),
+        ]

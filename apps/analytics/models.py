@@ -38,5 +38,5 @@ class QueryLog(models.Model):
         db_table = 'query_logs'
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['tenant', '-created_at']),
+            models.Index(fields=['tenant', '-created_at'], name='query_logs_tenant__idx'),
         ]

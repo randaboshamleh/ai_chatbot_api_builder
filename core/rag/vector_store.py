@@ -1,4 +1,5 @@
 import logging
+import re
 import warnings
 from typing import List, Dict, Any
 
@@ -21,6 +22,7 @@ except Exception as exc:
 from core.rag.embeddings import OllamaEmbeddingEngine
 
 logger = logging.getLogger(__name__)
+KEYWORD_TOKEN_RE = re.compile(r"[A-Za-z0-9_]+|[\u0600-\u06FF]+")
 
 # Special document_id prefix for summaries
 SUMMARY_DOC_PREFIX = "__summary__"
@@ -199,16 +201,55 @@ class TenantVectorStore:
             return []
 
         try:
-            all_results = self.collection.get(where={"is_summary": {"$eq": "false"}})
-            chunks = []
-            if all_results.get('documents'):
-                query_lower = query.lower()
-                for doc, meta in zip(all_results['documents'], all_results['metadatas']):
-                    if query_lower in doc.lower():
-                        chunks.append({'content': doc, 'metadata': meta, 'similarity_score': 0.5})
-                        if len(chunks) >= k:
-                            break
-            return chunks
+            query_norm = (query or "").strip().lower()
+            if not query_norm:
+                return []
+
+            query_tokens = [tok for tok in KEYWORD_TOKEN_RE.findall(query_norm) if len(tok) >= 2]
+            # Keep unique order and avoid scanning too many terms.
+            token_terms = list(dict.fromkeys(query_tokens))[:8]
+
+            # Prefer server-side document filtering to avoid fetching the entire corpus.
+            try:
+                exact_results = self.collection.get(
+                    where={"is_summary": {"$eq": "false"}},
+                    where_document={"$contains": query_norm},
+                    limit=k,
+                )
+                chunks = []
+                if exact_results.get("documents"):
+                    for doc, meta in zip(exact_results["documents"], exact_results["metadatas"]):
+                        chunks.append({"content": doc, "metadata": meta, "similarity_score": 0.72})
+                if len(chunks) >= k:
+                    return chunks[:k]
+            except Exception:
+                pass
+
+            # Fallback: bounded scan with token-hit scoring.
+            max_scan = max(120, k * 40)
+            all_results = self.collection.get(
+                where={"is_summary": {"$eq": "false"}},
+                limit=max_scan,
+            )
+            if not all_results.get("documents"):
+                return []
+
+            scored_chunks = []
+            for doc, meta in zip(all_results["documents"], all_results["metadatas"]):
+                text_lower = doc.lower()
+                token_hits = sum(1 for tok in token_terms if tok in text_lower)
+                full_query_hit = 1 if query_norm in text_lower else 0
+
+                if token_hits == 0 and full_query_hit == 0:
+                    continue
+
+                score = min(0.86, 0.42 + (token_hits * 0.06) + (0.18 if full_query_hit else 0.0))
+                scored_chunks.append(
+                    {"content": doc, "metadata": meta, "similarity_score": round(score, 4)}
+                )
+
+            scored_chunks.sort(key=lambda item: item.get("similarity_score", 0.0), reverse=True)
+            return scored_chunks[:k]
         except Exception as e:
             logger.warning(f"Keyword search failed: {e}")
             return []

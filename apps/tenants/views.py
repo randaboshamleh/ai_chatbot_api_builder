@@ -127,11 +127,21 @@ def _register_telegram_webhook(channel, base_url_override=None):
     import requests as req
     from django.conf import settings
     base = (base_url_override or settings.BASE_URL).rstrip('/')
+    if not base.startswith('https://') or 'your-domain.com' in base or 'localhost' in base or '127.0.0.1' in base:
+        return (
+            False,
+            'BASE_URL must be a public HTTPS URL (for example an ngrok URL in development).',
+        )
+
     webhook_url = f"{base}/api/v1/webhook/telegram/{channel.tenant.id}/"
     try:
         resp = req.post(
             f"https://api.telegram.org/bot{channel.telegram_token}/setWebhook",
-            json={"url": webhook_url},
+            json={
+                "url": webhook_url,
+                "allowed_updates": ["message", "edited_message"],
+                "drop_pending_updates": False,
+            },
             timeout=10,
         )
         data = resp.json()

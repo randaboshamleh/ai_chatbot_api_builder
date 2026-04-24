@@ -1,9 +1,10 @@
-import logging
+﻿import logging
 import os
 import tempfile
 
 from celery import shared_task
 from django.apps import apps
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,18 @@ def process_document_task(self, document_id: str):
             tmp_path = tmp_file.name
 
         try:
-            processor = DocumentProcessor(chunk_size=1000, chunk_overlap=200)
+            chunk_size = max(
+                400,
+                int(os.getenv('DOCUMENT_CHUNK_SIZE', getattr(settings, 'DOCUMENT_CHUNK_SIZE', 1400))),
+            )
+            chunk_overlap = max(
+                0,
+                int(os.getenv('DOCUMENT_CHUNK_OVERLAP', getattr(settings, 'DOCUMENT_CHUNK_OVERLAP', 100))),
+            )
+            if chunk_overlap >= chunk_size:
+                chunk_overlap = max(0, chunk_size // 4)
+
+            processor = DocumentProcessor(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
             chunks, processing_time = processor.process(
                 file_path=tmp_path,
                 file_type=document.file_type,
@@ -61,12 +73,21 @@ def process_document_task(self, document_id: str):
                     document=document,
                     vector_id=vector_ids[i],
                     chunk_index=i,
-                    content=chunk.page_content.replace('\x00', ''),  # إزالة NUL characters
+                    content=chunk.page_content.replace('\x00', ''),
                     metadata=chunk.metadata,
                 )
                 for i, chunk in enumerate(chunks)
             ]
-            DocumentChunk.objects.bulk_create(chunk_objects, batch_size=500)
+            batch_size = max(
+                100,
+                int(
+                    os.getenv(
+                        'DOCUMENT_BULK_CREATE_BATCH_SIZE',
+                        getattr(settings, 'DOCUMENT_BULK_CREATE_BATCH_SIZE', 1000),
+                    )
+                ),
+            )
+            DocumentChunk.objects.bulk_create(chunk_objects, batch_size=batch_size)
 
             document.status = 'indexed'
             document.chunk_count = len(chunks)
@@ -109,8 +130,8 @@ def generate_summaries_task(self, tenant_id: str, document_id: str = None):
     Stores them in ChromaDB via vector_store.add_summaries()
     """
     from apps.documents.models import DocumentChunk
-    from core.rag.pipeline import RAGPipeline
     from apps.tenants.models import Tenant
+    from core.rag.pipeline import RAGPipeline
 
     try:
         tenant = Tenant.objects.get(id=tenant_id)
@@ -140,12 +161,14 @@ def generate_summaries_task(self, tenant_id: str, document_id: str = None):
             combined = "\n\n".join(texts)[:3000]
             summary_text = pipeline.generate_summary(combined)
             if summary_text:
-                summaries_to_store.append({
-                    'text': summary_text,
-                    'level': 'section_summary',
-                    'category': cat,
-                    'document_id': document_id or 'all',
-                })
+                summaries_to_store.append(
+                    {
+                        'text': summary_text,
+                        'level': 'section_summary',
+                        'category': cat,
+                        'document_id': document_id or 'all',
+                    }
+                )
                 section_summary_texts.append(f"{cat}: {summary_text}")
                 logger.info(f"Generated section summary for category '{cat}'")
 
@@ -154,12 +177,14 @@ def generate_summaries_task(self, tenant_id: str, document_id: str = None):
             global_input = "\n\n".join(section_summary_texts)[:3000]
             global_summary = pipeline.generate_summary(global_input)
             if global_summary:
-                summaries_to_store.append({
-                    'text': global_summary,
-                    'level': 'global_summary',
-                    'category': 'all',
-                    'document_id': document_id or 'all',
-                })
+                summaries_to_store.append(
+                    {
+                        'text': global_summary,
+                        'level': 'global_summary',
+                        'category': 'all',
+                        'document_id': document_id or 'all',
+                    }
+                )
                 logger.info(f"Generated global summary for tenant {tenant_id}")
 
         if summaries_to_store:
@@ -184,41 +209,13 @@ def generate_summaries_task(self, tenant_id: str, document_id: str = None):
     soft_time_limit=270,
 )
 def process_telegram_message(self, tenant_id: str, chat_id, text: str, token: str):
-    import requests
-    from apps.tenants.models import Tenant
-    from apps.chatbot.models import ChatSession, ChatMessage
-    from core.rag.pipeline import RAGPipeline
-
-    def send(msg):
-        try:
-            requests.post(
-                f"https://api.telegram.org/bot{token}/sendMessage",
-                json={"chat_id": chat_id, "text": msg},
-                timeout=10,
-            )
-        except Exception as e:
-            logger.error(f"Telegram send error: {e}")
+    from apps.chatbot.channel_processors import process_telegram_message_sync, send_telegram_message
 
     try:
-        tenant = Tenant.objects.get(id=tenant_id)
-        pipeline = RAGPipeline(tenant=tenant)
-        result = pipeline.query(text)
-
-        session = ChatSession.objects.filter(tenant=tenant).order_by('-created_at').first()
-        if not session:
-            session = ChatSession.objects.create(tenant=tenant)
-
-        ChatMessage.objects.create(session=session, role='user', content=text)
-        ChatMessage.objects.create(
-            session=session, role='assistant',
-            content=result['answer'], sources=result['sources']
-        )
-
-        send(result['answer'])
-
+        process_telegram_message_sync(tenant_id, chat_id, text, token)
     except Exception as exc:
         logger.error(f"process_telegram_message error: {exc}")
-        send("عذراً، حدث خطأ أثناء معالجة سؤالك. حاول مرة أخرى.")
+        send_telegram_message(token, chat_id, "عذراً، حدث خطأ أثناء معالجة سؤالك. حاول مرة أخرى.")
         if not self.request.is_eager:
             try:
                 raise self.retry(exc=exc)
@@ -235,34 +232,13 @@ def process_telegram_message(self, tenant_id: str, chat_id, text: str, token: st
     soft_time_limit=270,
 )
 def process_whatsapp_message(self, tenant_id: str, phone: str, text: str, token: str, phone_id: str):
-    import requests
-    from apps.tenants.models import Tenant
-    from core.rag.pipeline import RAGPipeline
-
-    def send(msg):
-        try:
-            requests.post(
-                f"https://graph.facebook.com/v18.0/{phone_id}/messages",
-                headers={"Authorization": f"Bearer {token}"},
-                json={
-                    "messaging_product": "whatsapp",
-                    "to": phone,
-                    "type": "text",
-                    "text": {"body": msg},
-                },
-                timeout=10,
-            )
-        except Exception as e:
-            logger.error(f"WhatsApp send error: {e}")
+    from apps.chatbot.channel_processors import process_whatsapp_message_sync, send_whatsapp_message
 
     try:
-        tenant = Tenant.objects.get(id=tenant_id)
-        pipeline = RAGPipeline(tenant=tenant)
-        result = pipeline.query(text)
-        send(result['answer'])
-
+        process_whatsapp_message_sync(tenant_id, phone, text, token, phone_id)
     except Exception as exc:
         logger.error(f"process_whatsapp_message error: {exc}")
+        send_whatsapp_message(token, phone_id, phone, "عذراً، حدث خطأ أثناء معالجة سؤالك. حاول مرة أخرى.")
         if not self.request.is_eager:
             try:
                 raise self.retry(exc=exc)

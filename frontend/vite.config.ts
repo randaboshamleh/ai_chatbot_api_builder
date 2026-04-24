@@ -1,8 +1,9 @@
-import { defineConfig } from 'vite'
+﻿import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// استخدم Docker backend إذا كان متاح، وإلا استخدم المحلي
-const apiProxyTarget = process.env.VITE_API_PROXY_TARGET || 'http://localhost:80'
+// Default to direct Django API in dev to avoid nginx 502 issues.
+// Override with VITE_API_PROXY_TARGET when needed.
+const apiProxyTarget = process.env.VITE_API_PROXY_TARGET || 'http://localhost:8000'
 
 export default defineConfig({
     plugins: [react()],
@@ -13,7 +14,7 @@ export default defineConfig({
             '/api': {
                 target: apiProxyTarget,
                 changeOrigin: true,
-                secure: false
+                secure: false,
             },
         },
     },

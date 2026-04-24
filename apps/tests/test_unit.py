@@ -143,13 +143,13 @@ class TestRAGPipeline(TestCase):
         """Test no-info message returns Arabic for Arabic question"""
         question = "ما هو السعر"
         message = self.pipeline._no_info_message(question)
-        self.assertIn("لست متأكد", message)
+        self.assertIn("الوثائق", message)
 
     def test_no_info_message_english(self):
         """Test no-info message returns English for English question"""
         question = "What is the price"
         message = self.pipeline._no_info_message(question)
-        self.assertIn("not sure", message.lower())
+        self.assertIn("clear answer", message.lower())
 
     def test_detect_intent_pricing(self):
         """Test intent detection for pricing questions"""
@@ -219,6 +219,37 @@ class TestRAGPipeline(TestCase):
         context = self.pipeline.build_hierarchical_context("pricing", chunks)
         self.assertIsInstance(context, str)
         self.assertGreater(len(context), 0)
+
+    def test_rerank_prefers_confident_document(self):
+        """When one document is clearly stronger, selected chunks should come from it."""
+        query = "annual subscription discount"
+        chunks = [
+            {
+                "content": "General company introduction and mission statement.",
+                "metadata": {"source": "doc1.pdf", "document_id": "doc-1"},
+                "similarity_score": 0.92,
+            },
+            {
+                "content": "Annual subscription discount is 20 percent for yearly plan.",
+                "metadata": {"source": "pricing.docx", "document_id": "doc-2"},
+                "similarity_score": 0.78,
+            },
+            {
+                "content": "Yearly subscription includes 20 percent discount and priority support.",
+                "metadata": {"source": "pricing.docx", "document_id": "doc-2"},
+                "similarity_score": 0.76,
+            },
+        ]
+
+        selected = self.pipeline.rerank(query, chunks)
+        self.assertGreaterEqual(len(selected), 1)
+        self.assertEqual(selected[0]["metadata"]["document_id"], "doc-2")
+
+    def test_needs_arabic_rewrite_for_mixed_script(self):
+        """Arabic answers containing latin letters should trigger rewrite."""
+        query = "ما هي أسعار الاشتراك؟"
+        mixed_answer = "الأسعاr متاحة في الخطة السنوية."
+        self.assertTrue(self.pipeline._needs_arabic_rewrite(query, mixed_answer))
 
 
 # ═══════════════════════════════════════════════════════════════

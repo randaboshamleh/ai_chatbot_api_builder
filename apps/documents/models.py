@@ -46,6 +46,10 @@ class Document(models.Model):
     class Meta:
         db_table = 'documents'
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['tenant', 'status'], name='doc_tenant_status_idx'),
+            models.Index(fields=['tenant', '-created_at'], name='doc_tenant_created_idx'),
+        ]
     
     def __str__(self):
         return f"{self.tenant.name} - {self.title}"
@@ -68,3 +72,6 @@ class DocumentChunk(models.Model):
     class Meta:
         db_table = 'document_chunks'
         ordering = ['chunk_index']
+        indexes = [
+            models.Index(fields=['document', 'chunk_index'], name='doc_chunk_doc_chunk_idx'),
+        ]

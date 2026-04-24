@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 
 from apps.documents.models import Document
 from apps.documents.serializers import DocumentSerializer, DocumentUploadSerializer
-from apps.documents.permissions import IsTenantMember,IsTenantAdminOrOwner
+from apps.documents.permissions import IsTenantMember, IsTenantAdminOrOwner
 from core.rag.vector_store import TenantVectorStore
 
 logger = logging.getLogger(__name__)
@@ -22,6 +22,17 @@ class DocumentUploadView(APIView):
     """
     parser_classes = [MultiPartParser, FormParser]
     permission_classes = [IsTenantAdminOrOwner]
+
+    @staticmethod
+    def _estimate_wait_seconds(file_size: int) -> int:
+        size_mb = file_size / (1024 * 1024)
+        if size_mb <= 2:
+            return 60
+        if size_mb <= 10:
+            return 3 * 60
+        if size_mb <= 25:
+            return 6 * 60
+        return 10 * 60
 
     def post(self, request):
         serializer = DocumentUploadSerializer(data=request.data)
@@ -55,8 +66,11 @@ class DocumentUploadView(APIView):
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
 
-        # حساب checksum
-        checksum = hashlib.sha256(file.read()).hexdigest()
+        # حساب checksum بشكل تدريجي لتقليل استهلاك الذاكرة مع الملفات الكبيرة.
+        sha256 = hashlib.sha256()
+        for chunk in file.chunks():
+            sha256.update(chunk)
+        checksum = sha256.hexdigest()
         file.seek(0)
         
         # التحقق من عدم التكرار
@@ -91,10 +105,16 @@ class DocumentUploadView(APIView):
 
         transaction.on_commit(enqueue_processing)
 
-        return Response(
-            DocumentSerializer(document).data,
-            status=status.HTTP_202_ACCEPTED,
+        response_data = DocumentSerializer(document).data
+        response_data.update(
+            {
+                'status_message': 'queued_for_indexing',
+                'estimated_wait_seconds': self._estimate_wait_seconds(file.size),
+                'poll_interval_seconds': 5,
+            }
         )
+
+        return Response(response_data, status=status.HTTP_202_ACCEPTED)
 
 
 class DocumentListView(generics.ListAPIView):
@@ -130,6 +150,24 @@ class DocumentStatusView(APIView):
     def get(self, request, pk):
         try:
             doc = Document.objects.get(id=pk, tenant=request.user.tenant)
-            return Response({'id': str(doc.id), 'status': doc.status})
+            wait_hint = DocumentUploadView._estimate_wait_seconds(doc.file_size)
+            return Response(
+                {
+                    'id': str(doc.id),
+                    'status': doc.status,
+                    'status_message': (
+                        'indexing_complete'
+                        if doc.status == 'indexed'
+                        else 'indexing_failed'
+                        if doc.status == 'failed'
+                        else 'indexing_in_progress'
+                    ),
+                    'estimated_wait_seconds': wait_hint if doc.status in ['pending', 'processing'] else 0,
+                    'processing_time': doc.processing_time,
+                    'chunk_count': doc.chunk_count,
+                    'error_message': doc.error_message or None,
+                    'updated_at': doc.updated_at,
+                }
+            )
         except Document.DoesNotExist:
             return Response({'error': 'غير موجود'}, status=status.HTTP_404_NOT_FOUND)        

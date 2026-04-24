@@ -9,6 +9,11 @@ export interface Document {
     status: 'pending' | 'processing' | 'indexed' | 'failed'
     chunk_count: number
     created_at: string
+    updated_at?: string
+    processing_time?: number
+    status_message?: string
+    estimated_wait_seconds?: number
+    poll_interval_seconds?: number
     error_message?: string
 }
 
@@ -51,5 +56,13 @@ export const documentService = {
 
     deleteDocument: async (id: string) => {
         return documentService.delete(id)
+    },
+
+    estimateWaitSeconds: (fileSize: number) => {
+        const sizeMb = fileSize / (1024 * 1024)
+        if (sizeMb <= 2) return 60
+        if (sizeMb <= 10) return 3 * 60
+        if (sizeMb <= 25) return 6 * 60
+        return 10 * 60
     },
 }
