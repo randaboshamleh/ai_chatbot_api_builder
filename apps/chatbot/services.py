@@ -10,6 +10,7 @@ from django.utils import timezone
 
 from apps.analytics.models import QueryLog
 from apps.chatbot.models import ChatMessage, ChatSession
+from apps.chatbot.preprocessing import mask_sensitive_data
 from core.rag.pipeline import RAGPipeline
 
 logger = logging.getLogger(__name__)
@@ -146,8 +147,8 @@ def store_query_log(
         QueryLog.objects.create(
             tenant=tenant,
             user=user if getattr(user, "is_authenticated", False) else None,
-            query=question,
-            answer=answer,
+            query=mask_sensitive_data(question),
+            answer=mask_sensitive_data(answer),
             response_time=response_time,
             chunks_used=chunks_used,
             sources=sources or [],

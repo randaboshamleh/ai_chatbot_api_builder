@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.chatbot.models import ChatMessage, ChatSession
+from apps.chatbot.preprocessing import preprocess_user_text
 from apps.chatbot.serializers import ChatQuerySerializer
 from apps.chatbot.services import (
     get_or_create_session,
@@ -50,7 +51,12 @@ class ChatQueryView(APIView):
         serializer = ChatQuerySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        question = serializer.validated_data['question'].strip()
+        question = preprocess_user_text(
+            serializer.validated_data['question'],
+            max_length=ChatQuerySerializer().fields['question'].max_length,
+        )
+        if not question:
+            return Response({'error': 'السؤال مطلوب'}, status=status.HTTP_400_BAD_REQUEST)
         stream = serializer.validated_data.get('stream', False)
         session_id = serializer.validated_data.get('session_id')
 
@@ -150,7 +156,7 @@ class VoiceQueryView(APIView):
             finally:
                 os.unlink(temp_path)
 
-            question = transcription['text'].strip()
+            question = preprocess_user_text(transcription['text'])
             if not question:
                 return Response({'error': 'ما تم التعرف على الصوت'}, status=status.HTTP_400_BAD_REQUEST)
 

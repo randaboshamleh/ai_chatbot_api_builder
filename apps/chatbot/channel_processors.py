@@ -4,6 +4,7 @@ from typing import Iterable
 
 import requests
 
+from apps.chatbot.preprocessing import preprocess_user_text
 from apps.tenants.models import Tenant
 from apps.chatbot.services import (
     get_or_create_channel_session,
@@ -64,12 +65,15 @@ def send_telegram_message(token: str, chat_id, text: str) -> None:
 def process_telegram_message_sync(tenant_id: str, chat_id, text: str, token: str):
     tenant = Tenant.objects.get(id=tenant_id)
     session = get_or_create_channel_session(tenant, "telegram", str(chat_id))
+    normalized_text = preprocess_user_text(text)
+    if not normalized_text:
+        return
 
     send_telegram_typing(token, chat_id)
-    result, _response_time = run_query(tenant, text)
+    result, _response_time = run_query(tenant, normalized_text)
     fallback = (
         "عذرًا، لم أتمكن من توليد إجابة واضحة الآن."
-        if _is_arabic_text(text)
+        if _is_arabic_text(normalized_text)
         else "Sorry, I could not generate a response."
     )
     answer = result.get("answer", "").strip() or fallback
@@ -78,7 +82,7 @@ def process_telegram_message_sync(tenant_id: str, chat_id, text: str, token: str
     metadata = {"channel": "telegram", "external_chat_id": str(chat_id)}
     store_chat_exchange(
         session=session,
-        question=text,
+        question=normalized_text,
         answer=answer,
         sources=sources,
         user_metadata=metadata,
@@ -113,15 +117,18 @@ def send_whatsapp_message(token: str, phone_id: str, phone: str, text: str) -> N
 def process_whatsapp_message_sync(tenant_id: str, phone: str, text: str, token: str, phone_id: str):
     tenant = Tenant.objects.get(id=tenant_id)
     session = get_or_create_channel_session(tenant, "whatsapp", phone)
+    normalized_text = preprocess_user_text(text)
+    if not normalized_text:
+        return
 
-    result, _response_time = run_query(tenant, text)
+    result, _response_time = run_query(tenant, normalized_text)
     answer = result.get("answer", "").strip() or "Sorry, I could not generate a response."
     sources = result.get("sources", [])
 
     metadata = {"channel": "whatsapp", "external_chat_id": phone}
     store_chat_exchange(
         session=session,
-        question=text,
+        question=normalized_text,
         answer=answer,
         sources=sources,
         user_metadata=metadata,

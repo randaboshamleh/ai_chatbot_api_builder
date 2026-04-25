@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.chatbot.models import ChatMessage, ChatSession
+from apps.chatbot.preprocessing import preprocess_user_text
 from apps.chatbot.services import run_query
 from apps.tenants.models import Tenant, TenantChannel
 
@@ -64,7 +65,7 @@ class WebChatMessageView(APIView):
 
     def post(self, request):
         session_id = request.data.get('session_id')
-        message = (request.data.get('message') or '').strip()
+        message = preprocess_user_text(request.data.get('message') or "")
 
         if not session_id or not message:
             return Response({'error': 'session_id and message are required'}, status=status.HTTP_400_BAD_REQUEST)
