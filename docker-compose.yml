@@ -8,14 +8,18 @@ services:
       dockerfile: docker/Dockerfile
     ports:
       - "8000:8000"
-    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2 --threads 4 --timeout 180 --worker-class gthread
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2 --threads 4 --timeout 300 --worker-class gthread --access-logfile - --error-logfile -
     volumes:
       - .:/app
       - media_data:/app/media
     env_file: .env
+    environment:
+      - CHROMA_TELEMETRY_ON=False
+      - ANONYMIZED_TELEMETRY=False
+      - OLLAMA_CONTEXT_LENGTH=2048
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz/', timeout=5)"]
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz/', timeout=5)" ]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -44,6 +48,10 @@ services:
       - .:/app
       - media_data:/app/media
     env_file: .env
+    environment:
+      - CHROMA_TELEMETRY_ON=False
+      - ANONYMIZED_TELEMETRY=False
+      - OLLAMA_CONTEXT_LENGTH=2048
     restart: unless-stopped
     depends_on:
       redis:
@@ -82,8 +90,10 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-ai_pass}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-ai_user} -d ${DB_NAME:-ai_db}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER:-ai_user} -d ${DB_NAME:-ai_db}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -109,8 +119,10 @@ services:
     command: redis-server --requirepass ${REDIS_PASSWORD:-redis_pass}
     volumes:
       - redis_data:/data
+    ports:
+      - "6380:6379"
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD:-redis_pass} ping | grep PONG"]
+      test: [ "CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD:-redis_pass} ping | grep PONG" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -126,6 +138,7 @@ services:
     environment:
       - IS_PERSISTENT=TRUE
       - ANONYMIZED_TELEMETRY=FALSE
+      - CHROMA_TELEMETRY_ON=False
     volumes:
       - chroma_data:/chroma/chroma
     ports:
@@ -138,8 +151,14 @@ services:
   # ───────────────────────────────
   ollama:
     image: ollama/ollama:latest
+    environment:
+      OLLAMA_CONTEXT_LENGTH: 2048
+      OLLAMA_NUM_CTX: 2048
+      OLLAMA_NUM_THREAD: 4
     volumes:
       - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
     networks:
       - internal
 
@@ -172,7 +191,7 @@ services:
       - "443:443"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/healthz/ || exit 1"]
+      test: [ "CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/healthz/ || exit 1" ]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -190,7 +209,6 @@ volumes:
   ollama_data:
   minio_data:
   media_data:
-
 
 networks:
   internal:

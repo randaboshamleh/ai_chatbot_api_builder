@@ -1,32 +1,59 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --surface-bg: #f4f7fb;
+    --surface-bg-accent: #eaf2ff;
+    --ink-main: #161b22;
+  }
+
   body {
     @apply antialiased;
-    background: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 25%, #e0e7ff 50%, #f0f9ff 75%, #f0fdfa 100%);
-    background-size: 400% 400%;
-    animation: gradientShift 20s ease infinite;
+    background:
+      radial-gradient(circle at 12% 14%, rgba(56, 111, 255, 0.16), transparent 36%),
+      radial-gradient(circle at 86% 8%, rgba(0, 174, 255, 0.15), transparent 30%),
+      radial-gradient(circle at 80% 90%, rgba(32, 196, 170, 0.14), transparent 34%),
+      linear-gradient(145deg, var(--surface-bg) 0%, var(--surface-bg-accent) 55%, #f7fbff 100%);
+    background-attachment: fixed;
     min-height: 100vh;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-      sans-serif;
+    color: var(--ink-main);
+    font-family: 'Manrope', 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  @keyframes gradientShift {
-    0% {
-      background-position: 0% 50%;
-    }
+  html[lang='ar'] body {
+    font-family: 'IBM Plex Sans Arabic', 'Segoe UI', sans-serif;
+  }
 
-    50% {
-      background-position: 100% 50%;
+  @keyframes shimmerSlide {
+    0% {
+      transform: translateX(-100%);
     }
 
     100% {
-      background-position: 0% 50%;
+      transform: translateX(220%);
+    }
+  }
+
+  @keyframes floatPulse {
+    0% {
+      transform: translateY(0px) scale(1);
+      opacity: 0.75;
+    }
+
+    50% {
+      transform: translateY(-12px) scale(1.04);
+      opacity: 1;
+    }
+
+    100% {
+      transform: translateY(0px) scale(1);
+      opacity: 0.75;
     }
   }
 }
@@ -39,6 +66,15 @@
   .glass-dark {
     @apply bg-gray-900/80 backdrop-blur-xl border border-white/10 shadow-xl;
   }
+
+  .surface-panel {
+    @apply bg-white/90 border border-white shadow-[0_18px_40px_-26px_rgba(15,23,42,0.45)] backdrop-blur;
+  }
+
+  .headline-tight {
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+  }
 }
 
 @layer utilities {
@@ -48,5 +84,13 @@
 
   .delay-200 {
     animation-delay: 0.2s;
+  }
+
+  .animate-float-pulse {
+    animation: floatPulse 7s ease-in-out infinite;
+  }
+
+  .animate-shimmer-slide {
+    animation: shimmerSlide 2.8s linear infinite;
   }
 }

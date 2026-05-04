@@ -1,9 +1,14 @@
-﻿import axios from 'axios'
+import axios from 'axios'
 import { useAuthStore } from '../stores/authStore'
 
+const normalizeBackendHost = (url: string | undefined): string | undefined => {
+    if (!url) return url
+    return url.replace('http://127.0.0.1:8000', 'http://localhost:8000')
+}
+
 const BASE_URL =
-    (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
-    (import.meta.env.VITE_API_URL as string | undefined)?.trim() ||
+    normalizeBackendHost((import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim()) ||
+    normalizeBackendHost((import.meta.env.VITE_API_URL as string | undefined)?.trim()) ||
     '/api/v1'
 
 const api = axios.create({
@@ -21,7 +26,17 @@ const retryApi = axios.create({
     },
 })
 
+function isAuthEntryRequest(requestUrl?: string) {
+    if (!requestUrl) return false
+    return requestUrl.includes('/auth/login/') || requestUrl.includes('/auth/register/') || requestUrl.includes('/auth/token/refresh/')
+}
+
 retryApi.interceptors.request.use((config) => {
+    const requestUrl = config.url || ''
+    if (isAuthEntryRequest(requestUrl)) {
+        return config
+    }
+
     const token = localStorage.getItem('access_token')
     if (token) {
         config.headers.Authorization = `Bearer ${token}`
@@ -44,6 +59,11 @@ const processQueue = (error: any, token: string | null = null) => {
 }
 
 api.interceptors.request.use((config) => {
+    const requestUrl = config.url || ''
+    if (isAuthEntryRequest(requestUrl)) {
+        return config
+    }
+
     const token = localStorage.getItem('access_token')
     if (token) {
         config.headers.Authorization = `Bearer ${token}`
@@ -56,12 +76,12 @@ api.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config
         const requestUrl = originalRequest?.url || ''
-        const isAuthEntryRequest = requestUrl.includes('/auth/login/') || requestUrl.includes('/auth/register/')
+        const isAuthEntryPath = isAuthEntryRequest(requestUrl)
 
         const status = error.response?.status
         if (status === 502) {
             error.response.data = {
-                error: 'الخادم غير متاح حالياً (502). تأكد أن خدمة API شغالة على المنفذ 8000 أو عبر Nginx.',
+                error: '������ ��� ���� ������ (502). ���� �� ���� API ����� ��� ������ 8000 �� ��� Nginx.',
             }
         }
 
@@ -69,7 +89,7 @@ api.interceptors.response.use(
             error.response = {
                 status: 0,
                 data: {
-                    error: 'تعذر الاتصال بالخادم. تأكد أن الـ API شغالة.',
+                    error: '���� ������� �������. ���� �� ��� API �����.',
                 },
             }
         }
@@ -125,3 +145,4 @@ api.interceptors.response.use(
 )
 
 export default api
+

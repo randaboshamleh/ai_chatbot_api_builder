@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { useTranslation } from 'react-i18next'
 import {
     Send, CheckCircle, XCircle, Copy,
-    ExternalLink, Loader2, ArrowRight, Zap, Link as LinkIcon, AlertTriangle, Globe
+    ExternalLink, Loader2, ArrowRight, Zap, Link as LinkIcon, AlertTriangle, Globe, FileText, BarChart, MessageSquare
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import DashboardLayout from '../components/Layout/DashboardLayout'
@@ -25,8 +25,9 @@ const isLocalhost = () =>
 type Step = 'idle' | 'input' | 'connecting' | 'done'
 
 export default function ChannelsPage() {
-    const { t } = useTranslation()
+    const { t, i18n } = useTranslation()
     const qc = useQueryClient()
+    const isArabic = i18n.language === 'ar'
 
     // Telegram state
     const [tgStep, setTgStep] = useState<Step>('idle')
@@ -88,6 +89,33 @@ export default function ChannelsPage() {
     }
 
     const botLink = tgBotUsername ? `https://t.me/${tgBotUsername}` : ''
+    const channelsSubtitle = isArabic
+        ? 'اربط قنواتك المتاحة الآن (Telegram و Web Chat) ليوصل البوت إجابات موحدة مبنية على وثائقك.'
+        : 'Connect your available channels (Telegram and Web Chat) so customers get consistent answers grounded in your documents.'
+
+    const valueCards = isArabic
+        ? [
+            { icon: <MessageSquare className="w-6 h-6" />, title: 'وصول مباشر للعملاء', description: 'استقبل رسائل العملاء من تيليجرام أو موقعك بنفس جودة الرد.' },
+            { icon: <FileText className="w-6 h-6" />, title: 'إجابات من نفس المعرفة', description: 'كل قناة تعتمد على نفس قاعدة الوثائق المرفوعة داخل النظام.' },
+            { icon: <BarChart className="w-6 h-6" />, title: 'رؤية أوضح للأداء', description: 'تتبّع التفاعل والاستفسارات من القنوات في لوحة التحليلات.' },
+        ]
+        : [
+            { icon: <MessageSquare className="w-6 h-6" />, title: 'Meet Customers Where They Chat', description: 'Handle questions from Telegram and your website with one assistant behavior.' },
+            { icon: <FileText className="w-6 h-6" />, title: 'One Knowledge Across Channels', description: 'Every channel answers from the same uploaded documents and indexed content.' },
+            { icon: <BarChart className="w-6 h-6" />, title: 'Cleaner Performance Visibility', description: 'Track conversations and channel impact from your analytics dashboard.' },
+        ]
+
+    const quickFlow = isArabic
+        ? [
+            { label: '1', title: 'جهّز المحتوى', desc: 'ارفع الوثائق حتى تكون الإجابات مستندة لمعلوماتك الفعلية.' },
+            { label: '2', title: 'اربط القناة', desc: 'أدخل توكن تيليجرام أو استخدم كود الدمج لـ Web Chat.' },
+            { label: '3', title: 'ابدأ واستقبل الرسائل', desc: 'شارك رابط البوت أو فعّل الودجت داخل موقعك مباشرة.' },
+        ]
+        : [
+            { label: '1', title: 'Prepare Knowledge', desc: 'Upload your documents so answers are grounded in your actual content.' },
+            { label: '2', title: 'Connect A Channel', desc: 'Use Telegram token setup or embed the Web Chat script.' },
+            { label: '3', title: 'Go Live Fast', desc: 'Share your bot link or publish the website widget right away.' },
+        ]
 
     return (
         <DashboardLayout>
@@ -99,9 +127,47 @@ export default function ChannelsPage() {
                     </div>
                     <div>
                         <h1 className="text-3xl font-black text-gray-900">{t('channels.title')}</h1>
-                        <p className="text-gray-500 mt-1">{t('channels.subtitle')}</p>
+                        <p className="text-gray-600 mt-1">{channelsSubtitle}</p>
                     </div>
                 </div>
+
+                <motion.section
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.45 }}
+                    className="surface-panel rounded-3xl p-6 sm:p-8 relative overflow-hidden"
+                >
+                    <div className="absolute -inset-x-20 top-0 h-12 bg-gradient-to-r from-transparent via-white/70 to-transparent animate-shimmer-slide" />
+                    <div className="relative">
+                        <h2 className="headline-tight text-2xl sm:text-3xl font-black text-gray-900">
+                            {isArabic ? 'ليش إعداد القنوات مهم؟' : 'Why Channel Setup Matters'}
+                        </h2>
+                        <p className="text-gray-600 mt-2 max-w-3xl">
+                            {isArabic
+                                ? 'ربط القنوات يخلي تجربة العميل ثابتة، ويضمن أن نفس منطق الإجابة يوصل في تيليجرام وموقعك بدون تكرار إعدادات.'
+                                : 'Connecting channels keeps your support experience consistent, so the same answer quality is delivered in Telegram and your website.'}
+                        </p>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                            {valueCards.map((card, idx) => (
+                                <motion.div
+                                    key={card.title}
+                                    initial={{ opacity: 0, y: 14 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.1 + idx * 0.09, duration: 0.35 }}
+                                    whileHover={{ y: -5 }}
+                                    className="bg-white rounded-2xl border border-slate-200 p-5 shadow-[0_12px_30px_-24px_rgba(15,23,42,0.35)]"
+                                >
+                                    <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center mb-3">
+                                        {card.icon}
+                                    </div>
+                                    <h3 className="text-lg font-extrabold text-gray-900 mb-1">{card.title}</h3>
+                                    <p className="text-sm text-gray-600 leading-relaxed">{card.description}</p>
+                                </motion.div>
+                            ))}
+                        </div>
+                    </div>
+                </motion.section>
 
                 {/* Shared ngrok field for localhost */}
                 {isLocalhost() && tgStep === 'input' && (
@@ -211,9 +277,9 @@ export default function ChannelsPage() {
 
                     {/* ── WEB CHAT CARD ── */}
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white rounded-2xl border-2 border-gray-100 shadow-sm overflow-hidden">
-                        <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-6 border-b border-gray-100 flex items-center justify-between">
+                        <div className="bg-gradient-to-br from-sky-50 to-blue-50 p-6 border-b border-gray-100 flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                                <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500 text-white shadow-lg"><Globe className="w-6 h-6" /></div>
+                                <div className="p-3 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow-lg"><Globe className="w-6 h-6" /></div>
                                 <div>
                                     <h3 className="text-xl font-bold text-gray-900">Web Chat</h3>
                                     <p className="text-sm text-gray-500">{t('channels.webChatDesc')}</p>
@@ -226,11 +292,11 @@ export default function ChannelsPage() {
                         <div className="p-6">
                             {isWebActive ? (
                                 <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-5">
-                                    <div className="flex items-center gap-3 p-4 bg-purple-50 border border-purple-200 rounded-xl">
-                                        <CheckCircle className="w-6 h-6 text-purple-600 flex-shrink-0" />
+                                    <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                                        <CheckCircle className="w-6 h-6 text-blue-600 flex-shrink-0" />
                                         <div>
-                                            <p className="font-bold text-purple-800">{t('channels.webChatActive')}</p>
-                                            <p className="text-sm text-purple-600">{t('channels.webChatActiveDesc')}</p>
+                                            <p className="font-bold text-blue-800">{t('channels.webChatActive')}</p>
+                                            <p className="text-sm text-blue-600">{t('channels.webChatActiveDesc')}</p>
                                         </div>
                                     </div>
 
@@ -239,25 +305,25 @@ export default function ChannelsPage() {
                                         <p className="text-sm font-semibold text-gray-700 mb-2">{t('channels.integrationCode')}</p>
                                         <div className="bg-gray-900 rounded-xl p-4 overflow-x-auto">
                                             <pre className="text-xs text-gray-100 font-mono whitespace-pre-wrap">
-                                                {`<!-- أضف هذا الكود قبل </body> في موقعك -->
+                                                {`<!-- Add this code before </body> on your website -->
 <script src="${window.location.origin}/webchat.js"></script>
 <script>
   WebChat.init({
     tenantSlug: '${tenantSubdomain}',
     position: 'bottom-right',
-    primaryColor: '#8B5CF6'
+    primaryColor: '#2563EB'
   });
 </script>`}
                                             </pre>
                                         </div>
                                         <button
                                             onClick={() => {
-                                                const code = `<!-- أضف هذا الكود قبل </body> في موقعك -->\n<script src="${window.location.origin}/webchat.js"></script>\n<script>\n  WebChat.init({\n    tenantSlug: '${tenantSubdomain}',\n    position: 'bottom-right',\n    primaryColor: '#8B5CF6'\n  });\n</script>`;
+                                                const code = `<!-- Add this code before </body> on your website -->\n<script src="${window.location.origin}/webchat.js"></script>\n<script>\n  WebChat.init({\n    tenantSlug: '${tenantSubdomain}',\n    position: 'bottom-right',\n    primaryColor: '#2563EB'\n  });\n</script>`;
                                                 navigator.clipboard.writeText(code);
                                                 setWebCopied(true);
                                                 setTimeout(() => setWebCopied(false), 2000);
                                             }}
-                                            className="mt-2 w-full py-2 px-4 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg text-sm font-semibold flex items-center justify-center gap-2"
+                                            className="mt-2 w-full py-2 px-4 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-sm font-semibold flex items-center justify-center gap-2"
                                         >
                                             {webCopied ? <><CheckCircle className="w-4 h-4" />{t('common.copied')}</> : <><Copy className="w-4 h-4" />{t('common.copyCode')}</>}
                                         </button>
@@ -270,7 +336,7 @@ export default function ChannelsPage() {
                                             href={webChatDemoUrl}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="flex items-center justify-center gap-2 w-full py-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
+                                            className="flex items-center justify-center gap-2 w-full py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
                                         >
                                             <ExternalLink className="w-5 h-5" />
                                             {t('channels.openDemo')}
@@ -290,6 +356,41 @@ export default function ChannelsPage() {
                     </motion.div>
                 </div>
                 {/* End of grid */}
+
+                <motion.section
+                    initial={{ opacity: 0, y: 18 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.12, duration: 0.4 }}
+                    className="surface-panel rounded-3xl p-6 sm:p-8"
+                >
+                    <h2 className="headline-tight text-2xl sm:text-3xl font-black text-gray-900 mb-2">
+                        {isArabic ? 'كيف تفعّل القنوات بسرعة' : 'How To Activate Channels Quickly'}
+                    </h2>
+                    <p className="text-gray-600 mb-6">
+                        {isArabic
+                            ? 'الخطوات التالية تعطيك مسار واضح بدون تعقيد: جهّز المعرفة، اربط القناة، وابدأ التفاعل.'
+                            : 'Use this short flow to go live without friction: prepare knowledge, connect a channel, and start conversations.'}
+                    </p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {quickFlow.map((step, idx) => (
+                            <motion.div
+                                key={step.title}
+                                initial={{ opacity: 0, y: 14 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.18 + idx * 0.08, duration: 0.35 }}
+                                whileHover={{ y: -4 }}
+                                className="bg-white rounded-2xl border border-slate-200 p-5"
+                            >
+                                <div className="w-9 h-9 rounded-lg bg-blue-700 text-white font-extrabold flex items-center justify-center mb-3">
+                                    {step.label}
+                                </div>
+                                <h3 className="text-lg font-extrabold text-gray-900 mb-1">{step.title}</h3>
+                                <p className="text-sm text-gray-600 leading-relaxed">{step.desc}</p>
+                            </motion.div>
+                        ))}
+                    </div>
+                </motion.section>
 
             </div>
         </DashboardLayout>

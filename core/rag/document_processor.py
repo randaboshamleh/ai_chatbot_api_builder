@@ -12,6 +12,7 @@ from langchain_community.document_loaders import (
     CSVLoader,
 )
 from langchain_core.documents import Document as LangchainDocument
+from core.rag.text_preprocessing import normalize_document_text, normalize_for_search
 
 logger = logging.getLogger(__name__)
 
@@ -133,6 +134,8 @@ class DocumentProcessor:
             raise ValueError(f"Unsupported file type: {file_type}")
         loader = loader_class(file_path)
         documents = loader.load()
+        for doc in documents:
+            doc.page_content = normalize_document_text(doc.page_content)
         logger.info(f"Loaded {len(documents)} pages from {file_path}")
         return documents
 
@@ -181,8 +184,10 @@ class DocumentProcessor:
         chunks: List[LangchainDocument] = []
 
         for sec in sections:
-            text = sec["text"]
+            text = normalize_document_text(sec["text"])
             page = sec["page"]
+            if len(text) < 40:
+                continue
 
             if len(text) <= self.chunk_size:
                 # Section fits → keep as one chunk
@@ -196,6 +201,24 @@ class DocumentProcessor:
                     [text], metadatas=[{"page": page}]
                 )
                 chunks.extend(sub_docs)
+
+        # Remove noisy/duplicate chunks from OCR artifacts and repeated headers.
+        cleaned_chunks: List[LangchainDocument] = []
+        seen_chunk_keys: set[str] = set()
+        for chunk in chunks:
+            cleaned_text = normalize_document_text(chunk.page_content)
+            if len(cleaned_text) < 40:
+                continue
+
+            key = hashlib.md5(normalize_for_search(cleaned_text).encode("utf-8")).hexdigest()
+            if key in seen_chunk_keys:
+                continue
+
+            seen_chunk_keys.add(key)
+            chunk.page_content = cleaned_text
+            cleaned_chunks.append(chunk)
+
+        chunks = cleaned_chunks
 
         # Tag each chunk with category + index
         for i, chunk in enumerate(chunks):

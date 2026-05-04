@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Send, X, MessageCircle, Minimize2 } from 'lucide-react';
 import axios from 'axios';
+import { splitTextByDirection } from '../utils/textDirection';
 
 interface Message {
     id: string;
@@ -177,7 +178,7 @@ export default function WebChatWidget({
                     </div>
 
                     {/* Messages */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0" dir="ltr">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0" dir="auto">
                         {messages.map((message) => (
                             <div
                                 key={message.id}
@@ -189,14 +190,29 @@ export default function WebChatWidget({
                                         : 'bg-gray-100 text-gray-800 text-left'
                                         }`}
                                 >
-                                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                                    <div className="space-y-1">
+                                        {splitTextByDirection(message.content).map((segment, idx) => (
+                                            <p
+                                                key={`${message.id}-${idx}`}
+                                                className="text-sm whitespace-pre-wrap break-words leading-relaxed"
+                                                dir="auto"
+                                                style={{
+                                                    direction: segment.dir,
+                                                    unicodeBidi: 'plaintext',
+                                                    textAlign: segment.dir === 'rtl' ? 'right' : 'left',
+                                                }}
+                                            >
+                                                {segment.text}
+                                            </p>
+                                        ))}
+                                    </div>
                                     {message.sources && message.sources.length > 0 && (
                                         <div className="mt-3 pt-3 border-t border-gray-300">
                                             <p className="text-xs font-semibold opacity-75 mb-2 text-left">Sources:</p>
                                             <div className="space-y-1">
                                                 {message.sources.map((source, idx) => (
                                                     <div key={idx} className="text-xs opacity-75 bg-white/50 px-2 py-1 rounded text-left">
-                                                        📄 {source.source || source.title || source.filename || `Source ${idx + 1}`}
+                                                        - {source.source || source.title || source.filename || `Source ${idx + 1}`}
                                                     </div>
                                                 ))}
                                             </div>

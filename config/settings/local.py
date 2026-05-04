@@ -116,23 +116,33 @@ CORS_ALLOW_CREDENTIALS = True
 DEBUG = True
 ALLOWED_HOSTS = ['*']
 
-# قاعدة بيانات SQLite للتطوير السريع
+# Local-development helper: keep host-run Django connected to Docker infra.
+def _local_env(key: str, default: str) -> str:
+    return os.getenv(f'LOCAL_{key}', default)
+
+
+# Database: PostgreSQL only (no SQLite fallback).
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': _local_env('DB_NAME', 'ai_db'),
+        'USER': _local_env('DB_USER', 'ai_user'),
+        'PASSWORD': _local_env('DB_PASSWORD', 'ai_pass'),
+        'HOST': _local_env('DB_HOST', '127.0.0.1'),
+        'PORT': _local_env('DB_PORT', '5433'),
     }
 }
 
-# إعدادات Ollama للتطوير المحلي
-OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://ollama:11434')
-CHROMA_HOST = os.getenv('CHROMA_HOST', 'chromadb')
-CHROMA_PORT = int(os.getenv('CHROMA_PORT', 8000))
+# LLM / vector store defaults for host-run Django talking to Docker services.
+OLLAMA_BASE_URL = _local_env('OLLAMA_BASE_URL', 'http://127.0.0.1:11434')
+CHROMA_HOST = _local_env('CHROMA_HOST', '127.0.0.1')
+CHROMA_PORT = int(_local_env('CHROMA_PORT', '8001'))
 
 # Celery Configuration
-# استخدم Redis من Docker Compose
-CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://:redis_pass@redis:6379/0')
-CELERY_RESULT_BACKEND = os.getenv('REDIS_URL', 'redis://:redis_pass@redis:6379/0')
+# Use local Redis port exposed from Docker.
+LOCAL_REDIS_URL = _local_env('REDIS_URL', 'redis://:redis_pass@127.0.0.1:6380/0')
+CELERY_BROKER_URL = LOCAL_REDIS_URL
+CELERY_RESULT_BACKEND = LOCAL_REDIS_URL
 # تعطيل eager mode لاستخدام Celery worker
 CELERY_TASK_ALWAYS_EAGER = False
 CELERY_TASK_EAGER_PROPAGATES = False
@@ -171,14 +181,24 @@ RAG_RETRIEVAL_K = int(os.getenv('RAG_RETRIEVAL_K', 4))
 RAG_MIN_RELEVANCE_SCORE = float(os.getenv('RAG_MIN_RELEVANCE_SCORE', 0.50))
 RAG_ENABLE_KEYWORD_SEARCH = os.getenv('RAG_ENABLE_KEYWORD_SEARCH', 'False').lower() == 'true'
 RAG_KEYWORD_MIN_QUERY_LENGTH = int(os.getenv('RAG_KEYWORD_MIN_QUERY_LENGTH', 4))
-RAG_ANSWER_MAX_TOKENS = int(os.getenv('RAG_ANSWER_MAX_TOKENS', 260))
+RAG_ANSWER_MAX_TOKENS = int(os.getenv('RAG_ANSWER_MAX_TOKENS', 140))
 RAG_SUMMARY_MAX_TOKENS = int(os.getenv('RAG_SUMMARY_MAX_TOKENS', 150))
 RAG_MAX_CONTEXT_CHARS = int(os.getenv('RAG_MAX_CONTEXT_CHARS', 2500))
-RAG_MAX_RESPONSE_SECONDS = float(os.getenv('RAG_MAX_RESPONSE_SECONDS', 75))
+RAG_MAX_RESPONSE_SECONDS = float(os.getenv('RAG_MAX_RESPONSE_SECONDS', 90))
 RAG_MAX_SUMMARY_SECONDS = float(os.getenv('RAG_MAX_SUMMARY_SECONDS', 45))
 RAG_SINGLE_DOCUMENT_BIAS = os.getenv('RAG_SINGLE_DOCUMENT_BIAS', 'True').lower() == 'true'
 RAG_DOCUMENT_CONFIDENCE_MARGIN = float(os.getenv('RAG_DOCUMENT_CONFIDENCE_MARGIN', 0.06))
-RAG_MIN_ARABIC_ANSWER_RATIO = float(os.getenv('RAG_MIN_ARABIC_ANSWER_RATIO', 0.72))
+RAG_MIN_ARABIC_ANSWER_RATIO = float(os.getenv('RAG_MIN_ARABIC_ANSWER_RATIO', 0.60))
+RAG_ENABLE_ARABIC_REWRITE = os.getenv('RAG_ENABLE_ARABIC_REWRITE', 'False').lower() == 'true'
+RAG_REWRITE_MAX_TOKENS = int(os.getenv('RAG_REWRITE_MAX_TOKENS', 96))
+RAG_REWRITE_TIMEOUT_SECONDS = float(os.getenv('RAG_REWRITE_TIMEOUT_SECONDS', 20))
+RAG_MAX_PRIMARY_SECONDS_BEFORE_SKIP_REWRITE = float(
+    os.getenv('RAG_MAX_PRIMARY_SECONDS_BEFORE_SKIP_REWRITE', 25)
+)
+RAG_ENABLE_FALLBACK_ARABIC_REWRITE = os.getenv('RAG_ENABLE_FALLBACK_ARABIC_REWRITE', 'True').lower() == 'true'
+RAG_FALLBACK_REWRITE_MAX_TOKENS = int(os.getenv('RAG_FALLBACK_REWRITE_MAX_TOKENS', 90))
+RAG_FALLBACK_REWRITE_TIMEOUT_SECONDS = float(os.getenv('RAG_FALLBACK_REWRITE_TIMEOUT_SECONDS', 12))
+OLLAMA_REQUEST_TIMEOUT_SECONDS = float(os.getenv('OLLAMA_REQUEST_TIMEOUT_SECONDS', 120))
 
 CHANNEL_SESSION_CACHE_TTL_SECONDS = int(os.getenv('CHANNEL_SESSION_CACHE_TTL_SECONDS', 604800))
 TELEGRAM_PROCESSING_MODE = os.getenv('TELEGRAM_PROCESSING_MODE', 'celery')

@@ -99,6 +99,38 @@ docker compose up -d --force-recreate nginx
 
 6. Rebuild images only when dependencies or Dockerfile changed.
 
+## Local Runserver + Docker Infra (Postgres Only)
+
+If you want to run Django with `python manage.py runserver` while keeping dependencies in Docker:
+
+1. Start infra services only (do not start `api` to avoid port conflicts):
+```bash
+docker compose up -d postgres redis chromadb ollama
+```
+
+2. Run migrations from your local Python environment:
+```bash
+python manage.py migrate
+```
+
+3. Start Django locally:
+```bash
+python manage.py runserver
+```
+
+Local settings now use PostgreSQL by default (no SQLite fallback):
+- Postgres: `127.0.0.1:5433`
+- Redis: `127.0.0.1:6380`
+- ChromaDB: `127.0.0.1:8001`
+- Ollama: `127.0.0.1:11434`
+
+Optional overrides (PowerShell example):
+```powershell
+$env:LOCAL_DB_HOST="127.0.0.1"
+$env:LOCAL_DB_PORT="5433"
+$env:LOCAL_REDIS_URL="redis://:redis_pass@127.0.0.1:6380/0"
+```
+
 ## Indexing Performance Tuning
 
 You can tune indexing speed without code changes by setting these environment variables in `.env`:
@@ -131,11 +163,18 @@ If answers are slow, mixed-language, or pulled from the wrong file, tune these v
 RAG_RETRIEVAL_K=6
 RAG_ENABLE_KEYWORD_SEARCH=True
 RAG_MAX_DETAIL_CHUNKS=3
-RAG_ANSWER_MAX_TOKENS=160
-RAG_MAX_RESPONSE_SECONDS=75
+RAG_ANSWER_MAX_TOKENS=140
+RAG_MAX_RESPONSE_SECONDS=90
 RAG_SINGLE_DOCUMENT_BIAS=True
 RAG_DOCUMENT_CONFIDENCE_MARGIN=0.06
-RAG_MIN_ARABIC_ANSWER_RATIO=0.72
+RAG_MIN_ARABIC_ANSWER_RATIO=0.60
+RAG_ENABLE_ARABIC_REWRITE=False
+RAG_REWRITE_MAX_TOKENS=96
+RAG_REWRITE_TIMEOUT_SECONDS=20
+RAG_MAX_PRIMARY_SECONDS_BEFORE_SKIP_REWRITE=25
+RAG_ENABLE_FALLBACK_ARABIC_REWRITE=True
+RAG_FALLBACK_REWRITE_MAX_TOKENS=90
+RAG_FALLBACK_REWRITE_TIMEOUT_SECONDS=12
 TELEGRAM_PROCESSING_MODE=celery
 ```
 

@@ -10,7 +10,7 @@ from django.contrib.auth import get_user_model
 from apps.tenants.models import Tenant
 from apps.documents.models import Document
 from core.rag.document_processor import DocumentProcessor, tag_category, _semantic_split
-from core.rag.pipeline import RAGPipeline
+from core.rag.pipeline import RAGPipeline, StreamAnswerState
 from core.rag.embeddings import OllamaEmbeddingEngine
 
 User = get_user_model()
@@ -251,6 +251,21 @@ class TestRAGPipeline(TestCase):
         mixed_answer = "الأسعاr متاحة في الخطة السنوية."
         self.assertTrue(self.pipeline._needs_arabic_rewrite(query, mixed_answer))
 
+    def test_postprocess_answer_fixes_test_automation_translation(self):
+        """Arabic post-processing should enforce the correct automation terminology."""
+        query = "ما هو Katalon Studio؟"
+        answer = "Katalon Studio هو تطبيق لاختبار التكرار (Test Automation Tool)."
+        cleaned = self.pipeline._postprocess_answer(query, answer)
+        self.assertIn("أتمتة الاختبارات", cleaned)
+        self.assertNotIn("اختبار التكرار", cleaned)
+
+    def test_postprocess_answer_fixes_katalon_misspelling(self):
+        """Arabic post-processing should normalize malformed product-name variants."""
+        query = "ما هو katalon studio"
+        answer = "كتابل ستوديو منصة رائعة."
+        cleaned = self.pipeline._postprocess_answer(query, answer)
+        self.assertIn("Katalon Studio", cleaned)
+
 
 # ═══════════════════════════════════════════════════════════════
 # 🧪 Embedding Engine Tests (Skipped - requires Ollama running)
@@ -263,6 +278,56 @@ class TestRAGPipeline(TestCase):
 # ═══════════════════════════════════════════════════════════════
 # 🧪 Edge Cases & Error Handling
 # ═══════════════════════════════════════════════════════════════
+
+    @patch('core.rag.pipeline.OLLAMA_AVAILABLE', True)
+    def test_generate_stream_hybrid_cleanup_sets_final_answer(self):
+        """Streaming should lightly clean chunks, then finalize with full post-processing."""
+        self.pipeline.llm_client = Mock()
+        self.pipeline.model = "test-model"
+        self.pipeline.model_arabic = "test-model"
+        self.pipeline.llm_client.generate.return_value = iter(
+            [
+                {"response": "Here is the answer:\n"},
+                {"response": "Test\u200f value \u25A1.\u0007"},
+            ]
+        )
+        state = StreamAnswerState()
+
+        streamed = list(self.pipeline.generate_stream("What is this?", "ctx", state=state))
+        stream_text = "".join(streamed)
+
+        self.assertNotIn("\u200f", stream_text)
+        self.assertNotIn("\u25A1", stream_text)
+        self.assertNotIn("Here is the answer", state.final_answer)
+        self.assertIn("Test value", state.final_answer)
+
+    def test_query_stream_returns_answer_state(self):
+        """Stream query should return a state object for finalized storage content."""
+        chunk = {
+            "content": "Some context",
+            "metadata": {"source": "doc.pdf", "page": 1, "document_id": "doc-1"},
+            "final_score": 0.9,
+            "lexical_overlap": 0.5,
+        }
+        self.pipeline.detect_intent = Mock(return_value="general")
+        self.pipeline.retrieve = Mock(return_value=[chunk])
+        self.pipeline.rerank = Mock(return_value=[chunk])
+        self.pipeline.build_hierarchical_context = Mock(return_value="ctx")
+
+        def fake_stream(_query, _context, state=None):
+            if state:
+                state.tokens.append("hello")
+                state.final_answer = "hello"
+            yield "hello"
+
+        self.pipeline.generate_stream = fake_stream
+
+        result = self.pipeline.query("hello", stream=True)
+
+        self.assertIn("answer_state", result)
+        self.assertEqual(list(result["answer"]), ["hello"])
+        self.assertEqual(result["answer_state"].final_answer, "hello")
+
 
 class TestEdgeCases(TestCase):
     """Test edge cases and error handling"""

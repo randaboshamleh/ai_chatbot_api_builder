@@ -20,6 +20,62 @@
     let isOpen = false;
     let isExpanded = false;
     let isLoading = false;
+    const ARABIC_RE = /[\u0600-\u06FF]/;
+    const LATIN_RE = /[A-Za-z]/;
+
+    function detectDirection(text) {
+        const arabicCount = (text.match(/[\u0600-\u06FF]/g) || []).length;
+        const latinCount = (text.match(/[A-Za-z]/g) || []).length;
+        return arabicCount > latinCount ? 'rtl' : 'ltr';
+    }
+
+    function tokenDirection(token) {
+        const hasArabic = ARABIC_RE.test(token);
+        const hasLatin = LATIN_RE.test(token);
+        if (hasArabic && !hasLatin) return 'rtl';
+        if (hasLatin && !hasArabic) return 'ltr';
+        if (hasArabic && hasLatin) return 'ltr';
+        return null;
+    }
+
+    function splitTextByDirection(text) {
+        const value = (text || '').replace(/\r\n/g, '\n').trim();
+        if (!value) return [];
+
+        const segments = [];
+        const lines = value.split('\n');
+
+        for (const rawLine of lines) {
+            const line = rawLine.trim();
+            if (!line) continue;
+
+            const tokens = line.split(/\s+/).filter(Boolean);
+            const fallbackDir = detectDirection(line);
+            let current = null;
+
+            for (const token of tokens) {
+                const dir = tokenDirection(token);
+                if (!current) {
+                    current = { text: token, dir: dir || fallbackDir };
+                    continue;
+                }
+
+                if (!dir || dir === current.dir) {
+                    current.text += ` ${token}`;
+                    continue;
+                }
+
+                segments.push(current);
+                current = { text: token, dir };
+            }
+
+            if (current) {
+                segments.push(current);
+            }
+        }
+
+        return segments.length ? segments : [{ text: value, dir: detectDirection(value) }];
+    }
 
     // Create widget HTML
     function createWidget() {
@@ -230,11 +286,22 @@
                 ? 'background: ' + config.primaryColor + '; color: white;'
                 : 'background: white; color: #1f2937; box-shadow: 0 1px 3px rgba(0,0,0,0.1);'
             }
-            direction: ltr;
-            text-align: left;
         `;
 
-        bubble.innerHTML = `<p style="margin: 0; font-size: 14px; line-height: 1.5; white-space: pre-wrap;">${content}</p>`;
+        const segments = splitTextByDirection(content);
+        for (const segment of segments) {
+            const paragraph = document.createElement('p');
+            paragraph.setAttribute('dir', segment.dir);
+            paragraph.style.cssText = `
+                margin: 0;
+                font-size: 14px;
+                line-height: 1.5;
+                white-space: pre-wrap;
+                text-align: ${segment.dir === 'rtl' ? 'right' : 'left'};
+            `;
+            paragraph.textContent = segment.text;
+            bubble.appendChild(paragraph);
+        }
 
         if (sources && sources.length > 0) {
             const sourcesDiv = document.createElement('div');

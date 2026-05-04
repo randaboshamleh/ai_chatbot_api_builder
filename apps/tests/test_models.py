@@ -176,6 +176,19 @@ class RegistrationSerializerTest(TestCase):
         self.assertFalse(serializer2.is_valid())
         self.assertIn("username", serializer2.errors)
 
+    def test_duplicate_email_is_rejected(self):
+        """Registering with an existing email (case-insensitive) must fail validation."""
+        data = self._valid_data("-mail")
+        serializer = TenantRegistrationSerializer(data=data)
+        serializer.is_valid()
+        serializer.save()
+
+        data2 = self._valid_data("-mail2")
+        data2["email"] = data["email"].upper()
+        serializer2 = TenantRegistrationSerializer(data=data2)
+        self.assertFalse(serializer2.is_valid())
+        self.assertIn("email", serializer2.errors)
+
     def test_short_password_is_rejected(self):
         """Password shorter than 8 characters must fail."""
         data = self._valid_data("-short")
@@ -227,6 +240,49 @@ class AuthAPITest(TestCase):
             "password": "wrongpassword",
         }, format="json")
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_login_with_email_uses_password_matched_account(self):
+        """When multiple users share an email, login by email should match the correct password owner."""
+        TenantUser.objects.create_user(
+            username="apiuser2",
+            email=self.user.email,
+            password="otherpass123",
+            tenant=self.tenant,
+            role="member",
+        )
+        response = self.client.post(
+            "/api/v1/auth/login/",
+            {"username": self.user.email, "password": "testpass123"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["user"]["username"], "apiuser")
+
+    def test_login_with_email_field_works(self):
+        """Login should work using the email field instead of username."""
+        response = self.client.post(
+            "/api/v1/auth/login/",
+            {"email": self.user.email, "password": "testpass123"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["user"]["username"], "apiuser")
+
+    def test_login_with_email_conflict_when_multiple_password_matches(self):
+        """If duplicate email accounts share the same password, API should ask for username."""
+        TenantUser.objects.create_user(
+            username="apiuser3",
+            email=self.user.email,
+            password="testpass123",
+            tenant=self.tenant,
+            role="member",
+        )
+        response = self.client.post(
+            "/api/v1/auth/login/",
+            {"username": self.user.email, "password": "testpass123"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
 
     def test_register_new_tenant(self):
         """POST /api/v1/auth/register/ creates tenant and returns 201."""

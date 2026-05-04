@@ -103,6 +103,77 @@ class TenantVectorStore:
             logger.error(f"Failed to add documents: {e}")
             return []
 
+    def _db_fallback_search(self, query: str, k: int = 5) -> List[Dict]:
+        """
+        Fallback retrieval when ChromaDB is unavailable.
+        Uses indexed DocumentChunk rows for the current tenant with token-hit scoring.
+        """
+        try:
+            from django.db.models import Q
+            from apps.documents.models import DocumentChunk
+        except Exception as exc:
+            logger.warning("DB fallback retrieval unavailable: %s", exc)
+            return []
+
+        query_norm = (query or "").strip().lower()
+        if not query_norm:
+            return []
+
+        tokens = [tok for tok in KEYWORD_TOKEN_RE.findall(query_norm) if len(tok) >= 2]
+        token_terms = list(dict.fromkeys(tokens))[:8]
+
+        qs = DocumentChunk.objects.filter(
+            document__tenant_id=self.tenant_id,
+            document__status='indexed',
+        )
+
+        lookup_q = Q()
+        for tok in token_terms[:5]:
+            lookup_q |= Q(content__icontains=tok)
+
+        # Try phrase hit first; fallback to token OR query if phrase is too strict.
+        phrase_q = Q(content__icontains=query_norm)
+        if phrase_q:
+            scoped = qs.filter(phrase_q)
+            if not scoped.exists() and lookup_q:
+                scoped = qs.filter(lookup_q)
+        else:
+            scoped = qs.filter(lookup_q) if lookup_q else qs
+
+        rows = scoped.values('content', 'metadata')[: max(120, k * 40)]
+        if not rows:
+            return []
+
+        scored: List[Dict] = []
+        seen = set()
+        for row in rows:
+            content = (row.get('content') or "").strip()
+            if not content:
+                continue
+
+            content_l = content.lower()
+            token_hits = sum(1 for tok in token_terms if tok in content_l)
+            phrase_hit = 1 if query_norm in content_l else 0
+            if token_hits == 0 and phrase_hit == 0:
+                continue
+
+            key = content_l[:400]
+            if key in seen:
+                continue
+            seen.add(key)
+
+            score = min(0.9, 0.46 + (token_hits * 0.06) + (0.16 if phrase_hit else 0.0))
+            scored.append(
+                {
+                    'content': content,
+                    'metadata': row.get('metadata') or {},
+                    'similarity_score': round(score, 4),
+                }
+            )
+
+        scored.sort(key=lambda item: item.get('similarity_score', 0.0), reverse=True)
+        return scored[:k]
+
     def add_summaries(self, summaries: List[Dict]) -> None:
         """
         Store generated summaries as special chunks.
@@ -168,7 +239,7 @@ class TenantVectorStore:
 
     def similarity_search(self, query: str, k: int = 5) -> List[Dict]:
         if not CHROMADB_AVAILABLE or not self.collection:
-            return []
+            return self._db_fallback_search(query, k=k)
 
         try:
             query_embedding = self.embedding_engine.embed_query(query)
@@ -198,7 +269,7 @@ class TenantVectorStore:
 
     def keyword_search(self, query: str, k: int = 5) -> List[Dict]:
         if not CHROMADB_AVAILABLE or not self.collection:
-            return []
+            return self._db_fallback_search(query, k=k)
 
         try:
             query_norm = (query or "").strip().lower()

@@ -3,7 +3,6 @@
 import os
 import sys
 
-
 def main():
     """Run administrative tasks."""
     # Use DJANGO_SETTINGS_MODULE from environment if set, otherwise default to local

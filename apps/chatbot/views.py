@@ -111,14 +111,19 @@ class ChatQueryView(APIView):
             full_response = []
             try:
                 result = run_stream_query(tenant, question)
+                answer_state = result.get('answer_state')
                 for token in result['answer']:
                     full_response.append(token)
                     yield f"data: {token}\n\n"
 
+                final_answer = ''.join(full_response)
+                if answer_state:
+                    final_answer = answer_state.final_answer or answer_state.raw_answer or final_answer
+
                 ChatMessage.objects.create(
                     session=session,
                     role='assistant',
-                    content=''.join(full_response),
+                    content=final_answer,
                     sources=result.get('sources', []),
                 )
                 yield "data: [DONE]\n\n"

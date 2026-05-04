@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 import DashboardLayout from '../components/Layout/DashboardLayout'
 import { chatService } from '../services/chatService'
 import { documentService } from '../services/documentService'
+import { splitTextByDirection } from '../utils/textDirection'
 
 export default function ChatPage() {
     const { t } = useTranslation()
@@ -25,9 +26,6 @@ export default function ChatPage() {
 
     const hasIndexedDocuments = documents && Array.isArray(documents) && documents.some((doc: any) => doc.status === 'indexed')
     const hasProcessingDocuments = documents && Array.isArray(documents) && documents.some((doc: any) => doc.status === 'processing')
-
-    // Detect if text is Arabic
-    const isArabic = (text: string) => /[\u0600-\u06FF]/.test(text)
 
     const queryMutation = useMutation(chatService.sendQuery, {
         onSuccess: (data) => {
@@ -151,13 +149,22 @@ export default function ChatPage() {
                                                     ? 'bg-gradient-to-br from-primary-600 to-primary-700 text-white'
                                                     : 'bg-white border border-gray-200'
                                                     } rounded-2xl px-6 py-4 shadow-sm`}>
-                                                    <p
-                                                        className={`leading-relaxed ${msg.role === 'user' ? 'text-white' : 'text-gray-800'}`}
-                                                        dir={isArabic(msg.content) ? 'rtl' : 'ltr'}
-                                                        style={{ textAlign: isArabic(msg.content) ? 'right' : 'left' }}
-                                                    >
-                                                        {msg.content}
-                                                    </p>
+                                                    <div className="space-y-1">
+                                                        {splitTextByDirection(msg.content).map((segment, segmentIdx) => (
+                                                            <p
+                                                                key={`${idx}-${segmentIdx}`}
+                                                                className={`leading-relaxed whitespace-pre-wrap break-words ${msg.role === 'user' ? 'text-white' : 'text-gray-800'}`}
+                                                                dir="auto"
+                                                                style={{
+                                                                    direction: segment.dir,
+                                                                    unicodeBidi: 'plaintext',
+                                                                    textAlign: segment.dir === 'rtl' ? 'right' : 'left',
+                                                                }}
+                                                            >
+                                                                {segment.text}
+                                                            </p>
+                                                        ))}
+                                                    </div>
                                                     {msg.sources && msg.sources.length > 0 && (
                                                         <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap gap-2 items-center">
                                                             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
